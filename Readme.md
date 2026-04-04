@@ -146,6 +146,7 @@ Result
 | [📡 API](./docs/API.md)                   | API 명세 |
 | [📦 Snapshot](./docs/SNAPSHOT.md)         | 데이터 구조 |
 | [💻 Local Setup](./docs/LOCAL_SETUP.md)   | 개발 환경  |
+| [🧭 Product Idea](./docs/PRODUCT_IDEA.md) | 제품 방향성 |
 
 </div>
 

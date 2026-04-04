@@ -32,6 +32,55 @@ type Trace = {
 // ─────────────────────────────────────────────
 const JAVA_TEMPLATES: Template[] = [
   {
+    label: "선형 탐색",
+    code: `public class Main {
+  public static void main(String[] args) {
+    int[] arr = {4, 2, 7, 1, 9};
+    int target = 7;
+    int index = -1;
+    for (int i = 0; i < arr.length; i++) {
+      if (arr[i] == target) {
+        index = i;
+        break;
+      }
+    }
+    System.out.println(index);
+  }
+}`,
+  },
+  {
+    label: "버블 정렬",
+    code: `public class Main {
+  public static void main(String[] args) {
+    int[] arr = {5, 3, 1, 4};
+    int n = arr.length;
+    for (int i = 0; i < n - 1; i++) {
+      for (int j = 0; j < n - 1 - i; j++) {
+        if (arr[j] > arr[j + 1]) {
+          int tmp = arr[j];
+          arr[j] = arr[j + 1];
+          arr[j + 1] = tmp;
+        }
+      }
+    }
+    System.out.println(arr[0] + "," + arr[1] + "," + arr[2] + "," + arr[3]);
+  }
+}`,
+  },
+  {
+    label: "팩토리얼",
+    code: `public class Main {
+  static int factorial(int n) {
+    if (n <= 1) return 1;
+    return n * factorial(n - 1);
+  }
+  public static void main(String[] args) {
+    int result = factorial(5);
+    System.out.println(result);
+  }
+}`,
+  },
+  {
     label: "합계 계산",
     code: `public class Main {
   public static void main(String[] args) {
@@ -91,6 +140,49 @@ const JAVA_TEMPLATES: Template[] = [
 ];
 
 const PYTHON_TEMPLATES: Template[] = [
+  {
+    label: "선형 탐색",
+    code: `def main():
+    arr = [4, 2, 7, 1, 9]
+    target = 7
+    index = -1
+    for i in range(len(arr)):
+        if arr[i] == target:
+            index = i
+            break
+    print(index)
+
+if __name__ == "__main__":
+    main()`,
+  },
+  {
+    label: "버블 정렬",
+    code: `def main():
+    arr = [5, 3, 1, 4]
+    n = len(arr)
+    for i in range(n - 1):
+        for j in range(n - 1 - i):
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    print(",".join(map(str, arr)))
+
+if __name__ == "__main__":
+    main()`,
+  },
+  {
+    label: "팩토리얼",
+    code: `def factorial(n):
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+
+def main():
+    result = factorial(5)
+    print(result)
+
+if __name__ == "__main__":
+    main()`,
+  },
   {
     label: "합계 계산",
     code: `def main():
@@ -155,8 +247,8 @@ const TEMPLATES_BY_LANGUAGE: Record<Language, Template[]> = {
 };
 
 const SUPPORTED_SYNTAX_BY_LANGUAGE: Record<Language, string[]> = {
-  java: ["int, String (기본 자료형)", "int[] (배열)", "for / while 루프", "if / else 분기", "System.out.println"],
-  python: ["int, str (기본 자료형)", "list (배열)", "for / while 루프", "if / else 분기", "print()"],
+  java: ["int, String (기본 자료형)", "int[] (배열)", "for / while 루프", "if / else 분기", "재귀 함수 (콜스택)", "swap (tmp 변수)", "System.out.println"],
+  python: ["int, str (기본 자료형)", "list (배열)", "for / while 루프", "if / else 분기", "재귀 함수 (콜스택)", "print()"],
 };
 
 // ─────────────────────────────────────────────
@@ -170,6 +262,9 @@ function lineOf(lines: string[], pattern: RegExp): number {
 function generateTrace(code: string, language: Language): Trace {
   const lines = code.split("\n");
   if (language === "java") {
+    if (/int\[\] arr = \{4, 2, 7, 1, 9\}/.test(code) && /int target = 7/.test(code)) return makeLinearSearchTrace(lines, language);
+    if (/int\[\] arr = \{5, 3, 1, 4\}/.test(code) && /int tmp = arr\[j\]/.test(code)) return makeBubbleSortTrace(lines, language);
+    if (/static int factorial/.test(code) && /factorial\(5\)/.test(code)) return makeFactorialTrace(lines, language);
     if (/int a = 10/.test(code) && /int b = 20/.test(code)) return makeSumTrace(lines, language);
     if (/int\[\] arr = \{3, 9, 1, 7\}/.test(code)) return makeArrayMaxTrace(lines, language);
     if (/int left = 0/.test(code) && /int target/.test(code)) return makeTwoPointerTrace(lines, code, language);
@@ -177,11 +272,12 @@ function generateTrace(code: string, language: Language): Trace {
     return makeFallbackTrace(lines, language);
   }
 
+  if (/arr = \[4, 2, 7, 1, 9\]/.test(code) && /target = 7/.test(code)) return makeLinearSearchTrace(lines, language);
+  if (/arr = \[5, 3, 1, 4\]/.test(code) && /arr\[j\], arr\[j \+ 1\]/.test(code)) return makeBubbleSortTrace(lines, language);
+  if (/def factorial/.test(code) && /factorial\(5\)/.test(code)) return makeFactorialTrace(lines, language);
   if (/a = 10/.test(code) && /b = 20/.test(code) && /print\(msg\)/.test(code)) return makeSumTrace(lines, language);
   if (/arr = \[3, 9, 1, 7\]/.test(code)) return makeArrayMaxTrace(lines, language);
-  if (/left,\s*right = 0,\s*len\(arr\) - 1/.test(code) && /target =/.test(code)) {
-    return makeTwoPointerTrace(lines, code, language);
-  }
+  if (/left,\s*right = 0,\s*len\(arr\) - 1/.test(code) && /target =/.test(code)) return makeTwoPointerTrace(lines, code, language);
   if (/n = 7/.test(code) && /a,\s*b = 0,\s*1/.test(code)) return makeFibTrace(lines, language);
   return makeFallbackTrace(lines, language);
 }
@@ -190,19 +286,19 @@ function makeSumTrace(lines: string[], language: Language): Trace {
   const patterns =
     language === "java"
       ? {
-          a: /int a = 10/,
-          b: /int b = 20/,
-          sum: /int sum = a \+ b/,
-          msg: /String msg/,
-          print: /System\.out\.println/,
-        }
+        a: /int a = 10/,
+        b: /int b = 20/,
+        sum: /int sum = a \+ b/,
+        msg: /String msg/,
+        print: /System\.out\.println/,
+      }
       : {
-          a: /a = 10/,
-          b: /b = 20/,
-          sum: /total = a \+ b/,
-          msg: /msg =/,
-          print: /print\(msg\)/,
-        };
+        a: /a = 10/,
+        b: /b = 20/,
+        sum: /total = a \+ b/,
+        msg: /msg =/,
+        print: /print\(msg\)/,
+      };
 
   return {
     title: "합계 계산",
@@ -222,19 +318,19 @@ function makeArrayMaxTrace(lines: string[], language: Language): Trace {
   const patterns =
     language === "java"
       ? {
-          arr: /int\[\] arr/,
-          max: /int max = arr\[0\]/,
-          ifMax: /if \(arr\[i\] > max\)/,
-          loop: /for \(int i/,
-          print: /System\.out\.println/,
-        }
+        arr: /int\[\] arr/,
+        max: /int max = arr\[0\]/,
+        ifMax: /if \(arr\[i\] > max\)/,
+        loop: /for \(int i/,
+        print: /System\.out\.println/,
+      }
       : {
-          arr: /arr = \[/,
-          max: /max_val = arr\[0\]/,
-          ifMax: /if arr\[i\] > max_val/,
-          loop: /for i in range/,
-          print: /print\(max_val\)/,
-        };
+        arr: /arr = \[/,
+        max: /max_val = arr\[0\]/,
+        ifMax: /if arr\[i\] > max_val/,
+        loop: /for i in range/,
+        print: /print\(max_val\)/,
+      };
 
   return {
     title: "배열 최댓값",
@@ -315,17 +411,17 @@ function makeFibTrace(lines: string[], language: Language): Trace {
   const patterns =
     language === "java"
       ? {
-          n: /int n = 7/,
-          init: /int a = 0/,
-          loop: /int tmp = a \+ b/,
-          print: /System\.out\.println/,
-        }
+        n: /int n = 7/,
+        init: /int a = 0/,
+        loop: /int tmp = a \+ b/,
+        print: /System\.out\.println/,
+      }
       : {
-          n: /n = 7/,
-          init: /a,\s*b = 0,\s*1/,
-          loop: /a,\s*b = b,\s*a \+ b/,
-          print: /print\(b\)/,
-        };
+        n: /n = 7/,
+        init: /a,\s*b = 0,\s*1/,
+        loop: /a,\s*b = b,\s*a \+ b/,
+        print: /print\(b\)/,
+      };
 
   return {
     title: "피보나치",
@@ -355,6 +451,86 @@ function makeFallbackTrace(lines: string[], language: Language): Trace {
       { line: lines.length, stack: [], heap: [], output: "// 완료", note: "실행 종료" },
     ],
   };
+}
+
+function makeLinearSearchTrace(lines: string[], language: Language): Trace {
+  const heap: HeapItem[] = [{ addr: "0xD1", type: "int[]", value: "[4, 2, 7, 1, 9]" }];
+  const arr = [4, 2, 7, 1, 9];
+  const target = 7;
+  const arrLine = lineOf(lines, language === "java" ? /int\[\] arr/ : /arr = \[/);
+  const targetLine = lineOf(lines, language === "java" ? /int target = 7/ : /target = 7/);
+  const indexLine = lineOf(lines, language === "java" ? /int index = -1/ : /index = -1/);
+  const loopLine = lineOf(lines, language === "java" ? /for \(int i/ : /for i in range/);
+  const ifLine = lineOf(lines, language === "java" ? /if \(arr\[i\] == target\)/ : /if arr\[i\] == target/);
+  const printLine = lineOf(lines, language === "java" ? /System\.out\.println/ : /print\(index\)/);
+
+  const snaps: Snapshot[] = [
+    { line: arrLine, stack: [{ name: "arr", type: "int[]", value: "-> 0xD1" }], heap, output: "", note: "배열 [4, 2, 7, 1, 9] 생성" },
+    { line: targetLine, stack: [{ name: "arr", type: "int[]", value: "-> 0xD1" }, { name: "target", type: "int", value: "7" }], heap, output: "", note: "target = 7 설정" },
+    { line: indexLine, stack: [{ name: "arr", type: "int[]", value: "-> 0xD1" }, { name: "target", type: "int", value: "7" }, { name: "index", type: "int", value: "-1" }], heap, output: "", note: "index = -1 초기화 (못 찾은 상태)" },
+  ];
+
+  for (let i = 0; i < arr.length; i++) {
+    snaps.push({ line: loopLine, stack: [{ name: "arr", type: "int[]", value: "-> 0xD1" }, { name: "target", type: "int", value: "7" }, { name: "index", type: "int", value: "-1" }, { name: "i", type: "int", value: String(i) }], heap, output: "", note: `i=${i} 순회 중, arr[${i}]=${arr[i]}` });
+    snaps.push({ line: ifLine, stack: [{ name: "arr", type: "int[]", value: "-> 0xD1" }, { name: "target", type: "int", value: "7" }, { name: "index", type: "int", value: i === 2 ? "2" : "-1" }, { name: "i", type: "int", value: String(i) }], heap, output: "", note: `arr[${i}](${arr[i]}) == ${target} ? ${arr[i] === target ? "✅ 찾음 → break" : "❌"}` });
+    if (arr[i] === target) break;
+  }
+
+  snaps.push({ line: printLine, stack: [{ name: "arr", type: "int[]", value: "-> 0xD1" }, { name: "target", type: "int", value: "7" }, { name: "index", type: "int", value: "2" }], heap, output: "2", note: "index=2 출력 (arr[2]=7)" });
+  return { title: "선형 탐색", code: lines.join("\n"), snapshots: snaps, language };
+}
+
+function makeBubbleSortTrace(lines: string[], language: Language): Trace {
+  const arr = [5, 3, 1, 4];
+  const outerLine = lineOf(lines, language === "java" ? /for \(int i = 0/ : /for i in range\(n - 1\)/);
+  const innerLine = lineOf(lines, language === "java" ? /for \(int j = 0/ : /for j in range\(n - 1 - i\)/);
+  const ifLine = lineOf(lines, language === "java" ? /if \(arr\[j\] > arr\[j \+ 1\]\)/ : /if arr\[j\] > arr\[j \+ 1\]/);
+  const swapLine = lineOf(lines, language === "java" ? /int tmp = arr\[j\]/ : /arr\[j\], arr\[j \+ 1\]/);
+  const printLine = lineOf(lines, language === "java" ? /System\.out\.println/ : /print\("/);
+
+  const snaps: Snapshot[] = [];
+  const a = [...arr];
+
+  snaps.push({ line: outerLine, stack: [{ name: "arr", type: "int[]", value: "-> 0xE1" }, { name: "n", type: "int", value: "4" }], heap: [{ addr: "0xE1", type: "int[]", value: `[${a.join(", ")}]` }], output: "", note: `정렬 시작: [${a.join(", ")}]` });
+
+  for (let i = 0; i < a.length - 1; i++) {
+    for (let j = 0; j < a.length - 1 - i; j++) {
+      snaps.push({ line: innerLine, stack: [{ name: "arr", type: "int[]", value: "-> 0xE1" }, { name: "i", type: "int", value: String(i) }, { name: "j", type: "int", value: String(j) }], heap: [{ addr: "0xE1", type: "int[]", value: `[${a.join(", ")}]` }], output: "", note: `i=${i}, j=${j} 비교: arr[${j}]=${a[j]} vs arr[${j + 1}]=${a[j + 1]}` });
+      snaps.push({ line: ifLine, stack: [{ name: "arr", type: "int[]", value: "-> 0xE1" }, { name: "i", type: "int", value: String(i) }, { name: "j", type: "int", value: String(j) }], heap: [{ addr: "0xE1", type: "int[]", value: `[${a.join(", ")}]` }], output: "", note: `${a[j]} > ${a[j + 1]} ? ${a[j] > a[j + 1] ? "✅ swap" : "❌ 유지"}` });
+      if (a[j] > a[j + 1]) {
+        const tmp = a[j];
+        a[j] = a[j + 1];
+        a[j + 1] = tmp;
+        snaps.push({ line: swapLine, stack: [{ name: "arr", type: "int[]", value: "-> 0xE1" }, { name: "i", type: "int", value: String(i) }, { name: "j", type: "int", value: String(j) }, { name: "tmp", type: "int", value: String(tmp) }], heap: [{ addr: "0xE1", type: "int[]", value: `[${a.join(", ")}]` }], output: "", note: `swap → [${a.join(", ")}]` });
+      }
+    }
+  }
+
+  snaps.push({ line: printLine, stack: [{ name: "arr", type: "int[]", value: "-> 0xE1" }], heap: [{ addr: "0xE1", type: "int[]", value: `[${a.join(", ")}]` }], output: a.join(","), note: `정렬 완료: [${a.join(", ")}]` });
+  return { title: "버블 정렬", code: lines.join("\n"), snapshots: snaps, language };
+}
+
+function makeFactorialTrace(lines: string[], language: Language): Trace {
+  const baseLine = lineOf(lines, language === "java" ? /if \(n <= 1\)/ : /if n <= 1/);
+  const returnRecLine = lineOf(lines, language === "java" ? /return n \* factorial/ : /return n \* factorial/);
+  const mainCallLine = lineOf(lines, language === "java" ? /int result = factorial\(5\)/ : /result = factorial\(5\)/);
+  const printLine = lineOf(lines, language === "java" ? /System\.out\.println/ : /print\(result\)/);
+
+  const snaps: Snapshot[] = [
+    { line: mainCallLine, stack: [{ name: "[main]", type: "frame", value: "result=?" }], heap: [], output: "", note: "factorial(5) 호출" },
+    { line: returnRecLine, stack: [{ name: "[main]", type: "frame", value: "result=?" }, { name: "[factorial]", type: "frame", value: "n=5" }], heap: [], output: "", note: "factorial(5) → 5 * factorial(4)" },
+    { line: returnRecLine, stack: [{ name: "[main]", type: "frame", value: "result=?" }, { name: "[factorial]", type: "frame", value: "n=5" }, { name: "[factorial]", type: "frame", value: "n=4" }], heap: [], output: "", note: "factorial(4) → 4 * factorial(3)" },
+    { line: returnRecLine, stack: [{ name: "[main]", type: "frame", value: "result=?" }, { name: "[factorial]", type: "frame", value: "n=5" }, { name: "[factorial]", type: "frame", value: "n=4" }, { name: "[factorial]", type: "frame", value: "n=3" }], heap: [], output: "", note: "factorial(3) → 3 * factorial(2)" },
+    { line: returnRecLine, stack: [{ name: "[main]", type: "frame", value: "result=?" }, { name: "[factorial]", type: "frame", value: "n=5" }, { name: "[factorial]", type: "frame", value: "n=4" }, { name: "[factorial]", type: "frame", value: "n=3" }, { name: "[factorial]", type: "frame", value: "n=2" }], heap: [], output: "", note: "factorial(2) → 2 * factorial(1)" },
+    { line: baseLine, stack: [{ name: "[main]", type: "frame", value: "result=?" }, { name: "[factorial]", type: "frame", value: "n=5" }, { name: "[factorial]", type: "frame", value: "n=4" }, { name: "[factorial]", type: "frame", value: "n=3" }, { name: "[factorial]", type: "frame", value: "n=2" }, { name: "[factorial]", type: "frame", value: "n=1" }], heap: [], output: "", note: "n=1 → base case: return 1" },
+    { line: returnRecLine, stack: [{ name: "[main]", type: "frame", value: "result=?" }, { name: "[factorial]", type: "frame", value: "n=5" }, { name: "[factorial]", type: "frame", value: "n=4" }, { name: "[factorial]", type: "frame", value: "n=3" }, { name: "[factorial]", type: "frame", value: "n=2 → return 2" }], heap: [], output: "", note: "factorial(2) = 2 * 1 = 2 반환" },
+    { line: returnRecLine, stack: [{ name: "[main]", type: "frame", value: "result=?" }, { name: "[factorial]", type: "frame", value: "n=5" }, { name: "[factorial]", type: "frame", value: "n=4" }, { name: "[factorial]", type: "frame", value: "n=3 → return 6" }], heap: [], output: "", note: "factorial(3) = 3 * 2 = 6 반환" },
+    { line: returnRecLine, stack: [{ name: "[main]", type: "frame", value: "result=?" }, { name: "[factorial]", type: "frame", value: "n=5" }, { name: "[factorial]", type: "frame", value: "n=4 → return 24" }], heap: [], output: "", note: "factorial(4) = 4 * 6 = 24 반환" },
+    { line: returnRecLine, stack: [{ name: "[main]", type: "frame", value: "result=?" }, { name: "[factorial]", type: "frame", value: "n=5 → return 120" }], heap: [], output: "", note: "factorial(5) = 5 * 24 = 120 반환" },
+    { line: printLine, stack: [{ name: "[main]", type: "frame", value: "result=120" }], heap: [], output: "120", note: "result=120 출력" },
+  ];
+
+  return { title: "팩토리얼 (재귀)", code: lines.join("\n"), snapshots: snaps, language };
 }
 
 // ─────────────────────────────────────────────
@@ -460,7 +636,7 @@ export function TestLab() {
 
   const lineCount = editorCode.split("\n").length;
   const MONACO_LINE_HEIGHT = 20;
-  const editorHeight = Math.min(920, Math.max(220, lineCount * MONACO_LINE_HEIGHT + 24));
+  const editorHeight = Math.min(920, Math.max(500, lineCount * MONACO_LINE_HEIGHT + 24));
   const languageLabel = selectedLanguage === "java" ? "Java" : "Python";
   const fileName = selectedLanguage === "java" ? "Main.java" : "main.py";
 
@@ -514,21 +690,19 @@ export function TestLab() {
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setSelectedLanguage("java")}
-                className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold transition ${
-                  selectedLanguage === "java"
-                    ? "border-orange-400/30 bg-orange-400/10 text-orange-300"
-                    : "border-white/15 text-slate-400 hover:border-white/30 hover:text-slate-200"
-                }`}
+                className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold transition ${selectedLanguage === "java"
+                  ? "border-orange-400/30 bg-orange-400/10 text-orange-300"
+                  : "border-white/15 text-slate-400 hover:border-white/30 hover:text-slate-200"
+                  }`}
               >
                 Java
               </button>
               <button
                 onClick={() => setSelectedLanguage("python")}
-                className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold transition ${
-                  selectedLanguage === "python"
-                    ? "border-yellow-400/30 bg-yellow-400/10 text-yellow-300"
-                    : "border-white/15 text-slate-400 hover:border-white/30 hover:text-slate-200"
-                }`}
+                className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold transition ${selectedLanguage === "python"
+                  ? "border-yellow-400/30 bg-yellow-400/10 text-yellow-300"
+                  : "border-white/15 text-slate-400 hover:border-white/30 hover:text-slate-200"
+                  }`}
               >
                 Python
               </button>
@@ -536,117 +710,110 @@ export function TestLab() {
           </div>
         </header>
 
-        <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-5 px-4 py-6 sm:px-8 lg:flex-row">
-          {/* ── Editor column ── */}
-          <div className="flex min-w-0 flex-1 flex-col gap-3">
-            {/* Template tabs */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="mr-1 text-[11px] text-slate-500">템플릿</span>
-              {templates.map((t, i) => (
-                <button
-                  key={t.label}
-                  onClick={() => {
-                    setActiveTemplate(i);
-                    setEditorCode(t.code);
-                  }}
-                  className={`rounded-md border px-3 py-1 text-xs transition ${
-                    activeTemplate === i
-                      ? "border-blue/50 bg-blue/10 text-blue"
-                      : "border-white/10 text-slate-400 hover:border-white/25 hover:text-slate-200"
+        <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-3 px-4 py-6 sm:px-8">
+          {/* Template tabs - full width */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="mr-1 text-[11px] text-slate-500">템플릿</span>
+            {templates.map((t, i) => (
+              <button
+                key={t.label}
+                onClick={() => {
+                  setActiveTemplate(i);
+                  setEditorCode(t.code);
+                }}
+                className={`rounded-md border px-3 py-1 text-xs transition ${activeTemplate === i
+                  ? "border-blue/50 bg-blue/10 text-blue"
+                  : "border-white/10 text-slate-400 hover:border-white/25 hover:text-slate-200"
                   }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-
-            {/* VS Code-like window */}
-            <VsCodeWindow fileName={fileName} language={languageLabel} lineCount={lineCount}>
-              <div style={{ height: `${editorHeight}px` }}>
-                <MonacoEditor
-                  height="100%"
-                  language={selectedLanguage}
-                  value={editorCode}
-                  onChange={(val) => setEditorCode(val ?? "")}
-                  theme="vs-dark"
-                  options={{
-                    fontSize: 14,
-                    lineHeight: MONACO_LINE_HEIGHT,
-                    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                    minimap: { enabled: false },
-                    scrollBeyondLastLine: false,
-                    lineNumbers: "on",
-                    roundedSelection: true,
-                    padding: { top: 8, bottom: 8 },
-                    tabSize: 2,
-                    cursorBlinking: "smooth",
-                    smoothScrolling: true,
-                    automaticLayout: true,
-                    contextmenu: true,
-                    renderLineHighlight: "all",
-                    bracketPairColorization: { enabled: true },
-                  }}
-                />
-              </div>
-            </VsCodeWindow>
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
 
-          {/* ── Right sidebar ── */}
-          <div className="flex w-full flex-col gap-4 lg:w-64">
-            {/* How it works */}
-            <div className="rounded-2xl border border-white/10 bg-bg2/70 p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-blue">사용 방법</p>
-              <ol className="mt-3 space-y-3">
-                <li className="flex gap-2.5 text-sm text-slate-300">
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue/20 text-[10px] font-bold text-blue">1</span>
-                  <span className="min-w-0 leading-6">템플릿 선택 또는 직접 코드 작성</span>
-                </li>
-                <li className="flex gap-2.5 text-sm text-slate-300">
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue/20 text-[10px] font-bold text-blue">2</span>
-                  <span className="min-w-0 leading-6">
-                    <strong className="text-white">제출</strong>을 눌러 분석 시작
-                  </span>
-                </li>
-                <li className="flex gap-2.5 text-sm text-slate-300">
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue/20 text-[10px] font-bold text-blue">3</span>
-                  <span className="min-w-0 leading-6">Stack / Heap / Output 시각화 확인</span>
-                </li>
-                <li className="flex gap-2.5 text-sm text-slate-300">
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue/20 text-[10px] font-bold text-blue">4</span>
-                  <span className="min-w-0 leading-6">
-                    시각화 중 <strong className="text-white">코드 수정</strong>으로 돌아와 재제출
-                  </span>
-                </li>
-              </ol>
+          {/* Editor + Sidebar row */}
+          <div className="flex w-full flex-1 flex-col gap-5 lg:flex-row">
+            {/* ── Editor column ── */}
+            <div className="flex min-w-0 flex-1 flex-col">
+              {/* VS Code-like window */}
+              <VsCodeWindow fileName={fileName} language={languageLabel} lineCount={lineCount}>
+                <div style={{ height: `${editorHeight}px` }}>
+                  <MonacoEditor
+                    height="100%"
+                    language={selectedLanguage}
+                    value={editorCode}
+                    onChange={(val) => setEditorCode(val ?? "")}
+                    theme="vs-dark"
+                    options={{
+                      fontSize: 14,
+                      lineHeight: MONACO_LINE_HEIGHT,
+                      fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                      minimap: { enabled: false },
+                      scrollBeyondLastLine: false,
+                      lineNumbers: "on",
+                      roundedSelection: true,
+                      padding: { top: 8, bottom: 8 },
+                      tabSize: 2,
+                      cursorBlinking: "smooth",
+                      smoothScrolling: true,
+                      automaticLayout: true,
+                      contextmenu: true,
+                      renderLineHighlight: "all",
+                      bracketPairColorization: { enabled: true },
+                    }}
+                  />
+                </div>
+              </VsCodeWindow>
             </div>
 
-            {/* Supported syntax */}
-            <div className="rounded-2xl border border-white/10 bg-bg2/70 p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">지원 문법</p>
-              <ul className="mt-3 space-y-1 text-xs text-slate-400">
-                {SUPPORTED_SYNTAX_BY_LANGUAGE[selectedLanguage].map((item) => (
-                  <li key={item} className="flex gap-1.5">
-                    <span className="text-blue/60">•</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
+            {/* ── Right sidebar ── */}
+            <div className="flex w-full flex-col gap-4 lg:w-80">
+              {/* How it works */}
+              <div className="rounded-2xl border border-white/10 bg-bg2/70 p-5">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-blue">사용 방법</p>
+                <ol className="mt-3 space-y-2">
+                  {[
+                    "템플릿 선택 또는 직접 코드 작성",
+                    "제출을 눌러 분석 시작",
+                    "Stack / Heap / Output 시각화 확인",
+                    "시각화 중 코드 수정으로 돌아와 재제출",
+                  ].map((label, i) => (
+                    <li key={i} className="flex items-center gap-2 text-sm text-slate-300">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue/20 text-[10px] font-bold text-blue">{i + 1}</span>
+                      <span>{label}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              {/* Supported syntax */}
+              <div className="rounded-2xl border border-white/10 bg-bg2/70 p-5">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">지원 문법</p>
+                <ul className="mt-3 space-y-1 text-xs text-slate-400">
+                  {SUPPORTED_SYNTAX_BY_LANGUAGE[selectedLanguage].map((item) => (
+                    <li key={item} className="flex gap-1.5">
+                      <span className="text-blue/60">•</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Submit */}
+              <button
+                onClick={handleSubmit}
+                className="rounded-xl bg-gradient-to-r from-blue to-purple px-6 py-3.5 text-sm font-bold text-white shadow-glow transition hover:opacity-90 active:scale-[0.98]"
+              >
+                ▶ 제출 및 시각화
+              </button>
+
+              {/* If we have a previous trace, show re-submit hint */}
+              {trace && (
+                <p className="text-center text-[11px] text-slate-600">
+                  이전: <span className="text-slate-500">{trace.title}</span> · 코드를 수정하고 다시 제출하세요
+                </p>
+              )}
             </div>
-
-            {/* Submit */}
-            <button
-              onClick={handleSubmit}
-              className="rounded-xl bg-gradient-to-r from-blue to-purple px-6 py-3.5 text-sm font-bold text-white shadow-glow transition hover:opacity-90 active:scale-[0.98]"
-            >
-              ▶ 제출 및 시각화
-            </button>
-
-            {/* If we have a previous trace, show re-submit hint */}
-            {trace && (
-              <p className="text-center text-[11px] text-slate-600">
-                이전: <span className="text-slate-500">{trace.title}</span> · 코드를 수정하고 다시 제출하세요
-              </p>
-            )}
           </div>
         </div>
       </main>
@@ -684,13 +851,12 @@ export function TestLab() {
               <h1 className="text-lg font-bold text-white">{trace.title}</h1>
               {isFinished && (
                 <span
-                  className={`flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
-                    succeeded
-                      ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-400"
-                      : failed
-                        ? "border-red-500/40 bg-red-500/15 text-red-400"
-                        : "border-blue/40 bg-blue/15 text-blue"
-                  }`}
+                  className={`flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${succeeded
+                    ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-400"
+                    : failed
+                      ? "border-red-500/40 bg-red-500/15 text-red-400"
+                      : "border-blue/40 bg-blue/15 text-blue"
+                    }`}
                 >
                   {succeeded ? "✓ 정답" : failed ? "✗ 실패" : "● 완료"}
                 </span>
