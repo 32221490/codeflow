@@ -54,19 +54,33 @@ export function Hero() {
             실시간으로 시각화합니다.
           </p>
 
-          <div className="reveal-up reveal-delay-3 mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Link
-              href="/study"
-              className="rounded-xl bg-gradient-to-r from-blue to-purple px-7 py-3.5 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:opacity-90"
+          <div className="reveal-up reveal-delay-3 mt-10 w-full max-w-3xl">
+            <form
+              action="/study"
+              method="get"
+              className="panel-border flex flex-col gap-3 rounded-2xl bg-bg2/70 p-3 backdrop-blur sm:flex-row sm:items-center"
             >
-              ▶ 지금 시작하기
-            </Link>
-            <Link
-              href="#how-it-works"
-              className="rounded-xl border border-white/15 px-7 py-3.5 text-sm font-medium text-slate-300 transition hover:border-white/30 hover:text-white"
-            >
-              문서 보기 →
-            </Link>
+              <input
+                type="text"
+                name="prompt"
+                placeholder="원하는 문제 분야를 입력해보세요. 예) 투 포인터 입문 문제"
+                className="h-12 flex-1 rounded-xl border border-white/10 bg-black/20 px-4 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-blue/60 focus:ring-2 focus:ring-blue/20"
+              />
+              <button
+                type="submit"
+                className="h-12 rounded-xl bg-gradient-to-r from-blue to-purple px-6 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:opacity-90"
+              >
+                AI 문제 만들기
+              </button>
+            </form>
+            <div className="mt-3 text-center">
+              <Link
+                href="/study"
+                className="text-sm text-slate-400 underline decoration-slate-700 underline-offset-4 transition hover:text-slate-200 hover:decoration-slate-500"
+              >
+                또는 단계별 문제로 시작하기 →
+              </Link>
+            </div>
           </div>
         </div>
 
