@@ -1,63 +1,93 @@
-# 🌿 Contributing Guide
+# 🤝 Contributing Guide
 
-> Codehive 팀원들을 위한 Git 규칙 및 협업 가이드
-
----
-
-## 📌 브랜치 규칙
-
-### 브랜치 구조
+## 브랜치 구조
 
 ```
-main
-  ├── dongwoo
-  ├── gyeonghyeon
-  └── minhyeok
-```
-
-| 브랜치     | 설명                            |
-| ---------- | ------------------------------- |
-| `main`     | 최종 배포 브랜치 — 직접 push ❌ |
-| `본인이름` | 개인 작업 브랜치                |
-
-### 규칙
-
-```
-# 1. main 브랜치로 이동
-git checkout main
-
-# 2. main 최신 내용 가져오기
-git pull origin main
-
-# 3. 내 브랜치로 이동
-git checkout 본인이름
-
-# 4. main 내용을 내 브랜치에 합치기
-git merge main
+main         ← 배포용 (직접 push 금지)
+  └── develop    ← 통합 브랜치 (PR로만 merge)
+        ├── auth         ← 인증/회원 담당
+        ├── problem      ← 문제 관리 담당
+        └── visualizer   ← 시각화 담당
 ```
 
 ---
 
-### 타입 종류
-
-| 타입       | 설명             | 예시                                |
-| ---------- | ---------------- | ----------------------------------- |
-| `feat`     | 새로운 기능 추가 | `feat: 로그인 API 구현`             |
-| `fix`      | 버그 수정        | `fix: 토큰 만료 오류 수정`          |
-| `refactor` | 코드 리팩토링    | `refactor: ReviewService 코드 정리` |
-| `docs`     | 문서 수정        | `docs: README 업데이트`             |
-| `style`    | 코드 포맷 변경   | `style: 들여쓰기 정리`              |
-| `chore`    | 설정 파일 변경   | `chore: .gitignore 추가`            |
-
-### 예시
+## 처음 환경 설정 (최초 1회)
 
 ```bash
-git commit -m "feat: 게시글 작성 API 구현"
-git commit -m "fix: 댓글 삭제 권한 오류 수정"
-git commit -m "docs: API 명세 추가"
+# 원격 저장소 clone
+git clone <repo-url>
+cd codeflow
+
+# develop 브랜치 가져오기
+git fetch origin
+git checkout -b develop origin/develop
+
+# 자기 브랜치 생성 (develop 기준)
+git checkout -b auth   # 예시: auth 담당자
+git push origin auth
 ```
 
 ---
+
+## 매일 작업 시작 전 (최신화)
+
+```bash
+# 1. develop 최신화
+git checkout develop
+git pull origin develop
+
+# 2. 내 브랜치로 돌아와서 develop 반영
+git checkout auth        # 본인 브랜치로
+git merge develop        # develop 내용 가져오기
+
+# 3. 이제 작업 시작!
+```
+
+> 충돌(Conflict)이 발생하면 충돌 파일을 수정 후 `git add .` → `git commit`
+
+---
+
+## 작업 완료 후 PR 올리기
+
+```bash
+# 1. 작업 내용 commit
+git add .
+git commit -m "feat: 로그인 기능 구현"
+
+# 2. 원격 브랜치에 push
+git push origin auth
+
+# 3. GitHub에서 PR 생성
+#    auth → develop 으로 Pull Request
+#    팀원 리뷰 후 merge
+```
+
+---
+
+## 커밋 메시지 규칙
+
+| 태그       | 설명               |
+| ---------- | ------------------ |
+| `feat`     | 새로운 기능        |
+| `fix`      | 버그 수정          |
+| `style`    | UI/스타일 변경     |
+| `refactor` | 코드 리팩토링      |
+| `docs`     | 문서 수정          |
+| `chore`    | 설정, 빌드 등 기타 |
+
+예시: `feat: JWT 토큰 인증 구현`, `fix: 시각화 렌더링 오류 수정`
+
+---
+
+## 규칙 요약
+
+| 규칙                        | 내용             |
+| --------------------------- | ---------------- |
+| `main` 직접 push 금지       | 배포 브랜치 보호 |
+| 작업 전 develop pull        | 충돌 최소화      |
+| PR은 팀원 리뷰 후 merge     | 코드 품질 유지   |
+| develop → main은 팀 합의 후 | 배포 안정성 확보 |
 
 ## 🔀 PR (Pull Request) 방법
 
