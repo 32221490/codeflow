@@ -143,7 +143,7 @@ Result
 | 문서                                        | 설명     |
 | ----------------------------------------- | ------ |
 | [🧭 Product Idea](./docs/PRODUCT_IDEA.md) | 제품 방향성 |
-| [🤝 Contributing](./CONTRIBUTING.md)      | Git 협업 가이드 |
+| [🤝 Contributing](./docs/CONTRIBUTING.md)      | Git 협업 가이드 |
 | [📋 Feature Spec](./docs/FEATURE_SPEC.md) | 기능 명세 |
 
 
