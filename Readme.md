@@ -142,15 +142,18 @@ Result
 
 | 문서                                        | 설명     |
 | ----------------------------------------- | ------ |
-<!-- | [🏗 Architecture](./docs/ARCHITECTURE.md) | 시스템 구조 |
-| [📡 API](./docs/API.md)                   | API 명세 |
-| [📦 Snapshot](./docs/SNAPSHOT.md)         | 데이터 구조 |
-| [💻 Local Setup](./docs/LOCAL_SETUP.md)   | 개발 환경  | -->
 | [🧭 Product Idea](./docs/PRODUCT_IDEA.md) | 제품 방향성 |
 | [🤝 Contributing](./CONTRIBUTING.md)      | Git 협업 가이드 |
 | [📋 Feature Spec](./docs/FEATURE_SPEC.md) | 기능 명세 |
 
+
 </div>
+
+
+<!-- | [🏗 Architecture](./docs/ARCHITECTURE.md) | 시스템 구조 |
+| [📡 API](./docs/API.md)                   | API 명세 |
+| [📦 Snapshot](./docs/SNAPSHOT.md)         | 데이터 구조 |
+| [💻 Local Setup](./docs/LOCAL_SETUP.md)   | 개발 환경  | -->
 
 <br/>
 
