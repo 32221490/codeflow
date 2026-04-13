@@ -3,29 +3,10 @@
 ## 브랜치 구조
 
 ```
-main         ← 배포용 (직접 push 금지)
-  └── develop    ← 통합 브랜치 (PR로만 merge)
-        ├── auth         ← 인증/회원 담당
-        ├── problem      ← 문제 관리 담당
-        └── visualizer   ← 시각화 담당
-```
-
----
-
-## 처음 환경 설정 (최초 1회)
-
-```bash
-# 원격 저장소 clone
-git clone <repo-url>
-cd codeflow
-
-# develop 브랜치 가져오기
-git fetch origin
-git checkout -b develop origin/develop
-
-# 자기 브랜치 생성 (develop 기준)
-git checkout -b auth   # 예시: auth 담당자
-git push origin auth
+main              ← 배포용 (직접 push 금지, PR로만 merge)
+  ├── feature/auth         ← 인증/회원 담당
+  ├── feature/problem      ← 문제 관리 담당
+  └── feature/visualizer   ← 시각화 담당
 ```
 
 ---
@@ -33,13 +14,13 @@ git push origin auth
 ## 매일 작업 시작 전 (최신화)
 
 ```bash
-# 1. develop 최신화
-git checkout develop
-git pull origin develop
+# 1. main 최신화
+git checkout main
+git pull origin main
 
-# 2. 내 브랜치로 돌아와서 develop 반영
-git checkout auth        # 본인 브랜치로
-git merge develop        # develop 내용 가져오기
+# 2. 내 브랜치로 돌아와서 main 반영
+git checkout feature/auth    # 본인 브랜치로
+git merge main               # main 내용 가져오기
 
 # 3. 이제 작업 시작!
 ```
@@ -56,10 +37,10 @@ git add .
 git commit -m "feat: 로그인 기능 구현"
 
 # 2. 원격 브랜치에 push
-git push origin auth
+git push origin feature/auth
 
 # 3. GitHub에서 PR 생성
-#    auth → develop 으로 Pull Request
+#    feature/auth → main 으로 Pull Request
 #    팀원 리뷰 후 merge
 ```
 
@@ -82,12 +63,11 @@ git push origin auth
 
 ## 규칙 요약
 
-| 규칙                        | 내용             |
-| --------------------------- | ---------------- |
-| `main` 직접 push 금지       | 배포 브랜치 보호 |
-| 작업 전 develop pull        | 충돌 최소화      |
-| PR은 팀원 리뷰 후 merge     | 코드 품질 유지   |
-| develop → main은 팀 합의 후 | 배포 안정성 확보 |
+| 규칙                    | 내용             |
+| ----------------------- | ---------------- |
+| `main` 직접 push 금지   | 배포 브랜치 보호 |
+| 작업 전 main pull       | 충돌 최소화      |
+| PR은 팀원 리뷰 후 merge | 코드 품질 유지   |
 
 ## 🔀 PR (Pull Request) 방법
 
@@ -95,7 +75,7 @@ git push origin auth
 
 ```
 1. 본인 브랜치에서 작업 완료
-2. GitHub에서 PR 생성
+2. GitHub에서 PR 생성 (feature/xxx → main)
 3. 리뷰 후 Approve → Merge
 ```
 
@@ -115,7 +95,7 @@ git push origin auth
 
 ```
 ✅ 본인 브랜치에서 작업했는가
-✅ develop 최신 내용을 merge 했는가
+✅ main 최신 내용을 merge 했는가
 ✅ 빌드 오류가 없는가
 ✅ API 키 등 민감한 정보가 포함되지 않았는가
 ```
