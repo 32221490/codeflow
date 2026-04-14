@@ -30,12 +30,7 @@ dependencies {
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 
-	// 운영 DB 드라이버 — 사용하는 DB 주석 해제
-	// runtimeOnly 'com.mysql:mysql-connector-j'
-	// runtimeOnly 'org.postgresql:postgresql'
-
-	// 개발/테스트용 인메모리 DB
-	runtimeOnly 'com.h2database:h2'
+	runtimeOnly 'com.mysql:mysql-connector-j'
 
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
