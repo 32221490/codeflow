@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AuthModal } from "./AuthModal";
 
 function LogoMark() {
@@ -36,16 +37,10 @@ function LogoMark() {
   );
 }
 
-const navItems = [
-  { label: "홈", href: "#top" },
-  { label: "시각화", href: "#visualizer" },
-  { label: "학습", href: "#features" },
-  { label: "문서", href: "#how-it-works" },
-];
-
 export function Navbar() {
   const [modal, setModal] = useState<"login" | "signup" | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const router = useRouter();
 
   // 마운트 시 localStorage에서 토큰 확인
   useEffect(() => {
@@ -55,6 +50,7 @@ export function Navbar() {
   function handleLogout() {
     localStorage.removeItem("accessToken");
     setIsLoggedIn(false);
+    router.push("/");
   }
 
   return (
@@ -64,19 +60,11 @@ export function Navbar() {
         className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-bg/80 backdrop-blur-xl"
       >
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8">
-          <Link href="#top" className="flex items-center gap-3 text-lg font-bold">
+          <Link href="/" className="flex items-center gap-3 text-lg font-bold">
             <LogoMark />
             <span className="text-slate-100">Code</span>
             <span className="text-gradient-soft -ml-2">Flow</span>
           </Link>
-
-          <nav className="hidden items-center gap-8 text-sm text-slate-400 md:flex">
-            {navItems.map((item) => (
-              <Link key={item.label} href={item.href} className="transition hover:text-slate-100">
-                {item.label}
-              </Link>
-            ))}
-          </nav>
 
           <div className="flex items-center gap-3">
             {isLoggedIn ? (
