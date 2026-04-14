@@ -1,11 +1,9 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 
-// GitHub OAuth 로그인 성공 후 서버가 이 페이지로 리다이렉트함
-// URL 형태: /oauth/callback?token=eyJhbGci...
-export default function OAuthCallbackPage() {
+function OAuthCallback() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -14,7 +12,6 @@ export default function OAuthCallbackPage() {
     const error = searchParams.get("error");
 
     if (error === "email_private") {
-      // GitHub 이메일이 private인 경우 → 홈으로 이동하면서 에러 전달
       router.replace("/?oauth_error=email_private");
       return;
     }
@@ -26,9 +23,15 @@ export default function OAuthCallbackPage() {
     router.replace("/");
   }, [router, searchParams]);
 
+  return <p className="text-sm">로그인 처리 중…</p>;
+}
+
+export default function OAuthCallbackPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-bg text-slate-300">
-      <p className="text-sm">로그인 처리 중…</p>
+      <Suspense fallback={<p className="text-sm">로그인 처리 중…</p>}>
+        <OAuthCallback />
+      </Suspense>
     </div>
   );
 }
