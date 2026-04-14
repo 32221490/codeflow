@@ -49,9 +49,6 @@ public class User extends BaseTimeEntity {
     @Column(nullable = false)
     private Role role; // ROLE_USER, ROLE_ADMIN
 
-    @Column(nullable = false)
-    private boolean emailVerified = false; // 이메일 인증 여부
-
     public static User from(SignupRequest request, String encodedPassword) {
         return new User(
                 null,
@@ -60,12 +57,7 @@ public class User extends BaseTimeEntity {
                 request.getNickname(),
                 null,
                 LoginType.EMAIL,
-                Role.ROLE_USER,
-                false);
-    }
-
-    public void verifyEmail() {
-        this.emailVerified = true;
+                Role.ROLE_USER);
     }
 
 }

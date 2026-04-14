@@ -12,7 +12,6 @@ pnpm-debug.log*
 
 # Env files
 .env
-.env.*
 
 # Spring 로컬 민감 설정
 application-local.properties
