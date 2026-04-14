@@ -53,7 +53,6 @@ public class User extends BaseTimeEntity {
                 LoginType.EMAIL, Role.ROLE_USER);
     }
 
-
     public static User fromGithub(String email, String nickname, String profileImage) {
         return new User(null, email, null, nickname, profileImage, LoginType.GITHUB,
                 Role.ROLE_ADMIN);
