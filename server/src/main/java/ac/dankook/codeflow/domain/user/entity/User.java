@@ -8,7 +8,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-
 import ac.dankook.codeflow.domain.auth.dto.SignupRequest;
 import ac.dankook.codeflow.domain.user.dto.type.LoginType;
 import ac.dankook.codeflow.domain.user.dto.type.Role;
@@ -50,14 +49,13 @@ public class User extends BaseTimeEntity {
     private Role role; // ROLE_USER, ROLE_ADMIN
 
     public static User from(SignupRequest request, String encodedPassword) {
-        return new User(
-                null,
-                request.getEmail(),
-                encodedPassword,
-                request.getNickname(),
-                null,
-                LoginType.EMAIL,
-                Role.ROLE_USER);
+        return new User(null, request.getEmail(), encodedPassword, request.getNickname(), null,
+                LoginType.EMAIL, Role.ROLE_USER);
+    }
+
+    public static User fromGithub(String email, String nickname, String profileImage) {
+        return new User(null, email, null, nickname, profileImage, LoginType.GITHUB,
+                Role.ROLE_ADMIN);
     }
 
 }

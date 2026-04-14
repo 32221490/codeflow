@@ -3,11 +3,13 @@ package ac.dankook.codeflow.domain.auth.dto;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
+@AllArgsConstructor
 public class SignupRequest {
 
     // 사용자 이메일 (형식 검증 필요)
