@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AuthModal } from "./AuthModal";
 
 function LogoMark() {
@@ -45,6 +45,17 @@ const navItems = [
 
 export function Navbar() {
   const [modal, setModal] = useState<"login" | "signup" | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // 마운트 시 localStorage에서 토큰 확인
+  useEffect(() => {
+    setIsLoggedIn(!!localStorage.getItem("accessToken"));
+  }, []);
+
+  function handleLogout() {
+    localStorage.removeItem("accessToken");
+    setIsLoggedIn(false);
+  }
 
   return (
     <>
@@ -68,18 +79,29 @@ export function Navbar() {
           </nav>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setModal("login")}
-              className="hidden rounded-md border border-white/15 px-4 py-2 text-sm text-slate-300 transition hover:border-blue hover:text-blue sm:inline-flex"
-            >
-              로그인
-            </button>
-            <button
-              onClick={() => setModal("signup")}
-              className="rounded-md bg-gradient-to-r from-blue to-purple px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:opacity-90"
-            >
-              회원가입
-            </button>
+            {isLoggedIn ? (
+              <button
+                onClick={handleLogout}
+                className="rounded-md border border-white/15 px-4 py-2 text-sm text-slate-300 transition hover:border-red-400 hover:text-red-400"
+              >
+                로그아웃
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => setModal("login")}
+                  className="hidden rounded-md border border-white/15 px-4 py-2 text-sm text-slate-300 transition hover:border-blue hover:text-blue sm:inline-flex"
+                >
+                  로그인
+                </button>
+                <button
+                  onClick={() => setModal("signup")}
+                  className="rounded-md bg-gradient-to-r from-blue to-purple px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:opacity-90"
+                >
+                  회원가입
+                </button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -88,6 +110,7 @@ export function Navbar() {
         <AuthModal
           initialMode={modal}
           onClose={() => setModal(null)}
+          onSuccess={() => setIsLoggedIn(true)}
         />
       )}
     </>

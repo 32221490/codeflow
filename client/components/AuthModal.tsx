@@ -132,6 +132,9 @@ function LoginForm({
         setError(data?.message ?? "이메일 또는 비밀번호를 확인해 주세요.");
         return;
       }
+      // 서버 응답에서 accessToken 꺼내서 저장
+      const { data } = await res.json();
+      localStorage.setItem("accessToken", data.accessToken);
       onSuccess?.();
       onClose();
     } catch {

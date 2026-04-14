@@ -24,6 +24,8 @@ import lombok.RequiredArgsConstructor;
 public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
+    private final OAuth2SuccessHandler oAuth2SuccessHandler;
+    private final CustomOAuth2UserService customOAuth2UserService;
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -63,6 +65,14 @@ public class SecurityConfig {
 
                 // H2 콘솔 iframe 허용
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+
+                // GitHub OAuth2 로그인 설정
+                // /oauth2/authorization/github 로 요청하면 GitHub 인증 페이지로 자동 리다이렉트됨
+                // 인증 완료 후 OAuth2SuccessHandler.onAuthenticationSuccess() 호출
+                .oauth2Login(oauth2 -> oauth2
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(customOAuth2UserService))
+                        .successHandler(oAuth2SuccessHandler))
 
                 // JWT 필터 등록
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
