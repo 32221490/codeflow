@@ -1,24 +1,22 @@
 package ac.dankook.codeflow.global.security;
 
 import java.io.IOException;
-
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
-
 import ac.dankook.codeflow.domain.user.entity.User;
-import ac.dankook.codeflow.domain.user.repository.userRepository;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import ac.dankook.codeflow.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor
 public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
-    private final userRepository userRepository;
+    private final UserRepository userRepository;
     private final JwtProvider jwtProvider;
 
     // application.properties의 app.oauth2.redirect-uri 값
@@ -29,8 +27,8 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
     /**
      * GitHub OAuth2 인증이 성공했을 때 Spring Security가 자동으로 호출하는 메서드
      *
-     * authentication.getPrincipal() → GitHub에서 받아온 유저 정보 객체 (OAuth2User)
-     * OAuth2User.getAttributes() → GitHub API 응답 JSON을 Map으로 담고 있음
+     * authentication.getPrincipal() → GitHub에서 받아온 유저 정보 객체 (OAuth2User) OAuth2User.getAttributes()
+     * → GitHub API 응답 JSON을 Map으로 담고 있음
      */
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
@@ -42,11 +40,13 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         String nickname = oAuth2User.getAttribute("login");
         String profileImage = oAuth2User.getAttribute("avatar_url");
 
-        User user = userRepository.findByEmail(email)
-                .orElseGet(() -> userRepository.save(User.fromGithub(email, nickname, profileImage)));
+        User user = userRepository.findByEmail(email).orElseGet(
+                () -> userRepository.save(User.fromGithub(email, nickname, profileImage)));
 
-        String accessToken = jwtProvider.generateAccessToken(user.getEmail(), user.getRole().toString());
+        String accessToken = jwtProvider.generateAccessToken(user.getId(), user.getEmail(),
+                user.getRole().toString());
 
-        getRedirectStrategy().sendRedirect(request, response, redirectUri + "?token=" + accessToken);
+        getRedirectStrategy().sendRedirect(request, response,
+                redirectUri + "?token=" + accessToken);
     }
 }
