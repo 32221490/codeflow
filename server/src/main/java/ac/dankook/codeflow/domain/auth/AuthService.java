@@ -12,7 +12,7 @@ import ac.dankook.codeflow.domain.auth.dto.LoginResponse;
 import ac.dankook.codeflow.domain.auth.dto.SignupRequest;
 import ac.dankook.codeflow.domain.auth.dto.SignupResponse;
 import ac.dankook.codeflow.domain.user.entity.User;
-import ac.dankook.codeflow.domain.user.repository.userRepository;
+import ac.dankook.codeflow.domain.user.repository.UserRepository;
 import ac.dankook.codeflow.global.config.MailForm;
 import ac.dankook.codeflow.global.exception.BusinessException;
 import ac.dankook.codeflow.global.exception.ErrorCode;
@@ -24,7 +24,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AuthService {
 
-    private final userRepository userRepository;
+    private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider JwtProvider;
 
@@ -93,9 +93,9 @@ public class AuthService {
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new BusinessException(ErrorCode.INVALID_PASSWORD);
         }
-        String accessToken =
-                JwtProvider.generateAccessToken(user.getEmail(), user.getRole().toString());
-        return LoginResponse.of(user, accessToken);
+        String accessToken = JwtProvider.generateAccessToken(user.getId(), user.getEmail(),
+                user.getRole().toString());
+        return LoginResponse.of(accessToken);
 
     }
 }

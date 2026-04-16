@@ -2,12 +2,10 @@ package ac.dankook.codeflow.global.security;
 
 import java.io.IOException;
 import java.util.List;
-
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
@@ -16,7 +14,6 @@ import org.springframework.security.web.context.RequestAttributeSecurityContextR
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
-
 import lombok.RequiredArgsConstructor;
 
 @Component
@@ -24,7 +21,8 @@ import lombok.RequiredArgsConstructor;
 public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtProvider jwtProvider;
-    private final RequestAttributeSecurityContextRepository contextRepository = new RequestAttributeSecurityContextRepository();
+    private final RequestAttributeSecurityContextRepository contextRepository =
+            new RequestAttributeSecurityContextRepository();
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -41,8 +39,9 @@ public class JwtFilter extends OncePerRequestFilter {
             String role = jwtProvider.getRole(token);
 
             // 4. Spring Security 인증 객체 생성
-            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userId, null,
-                    List.of(new SimpleGrantedAuthority(role)));
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(userId, null,
+                            List.of(new SimpleGrantedAuthority(role)));
 
             // 5. SecurityContext에 인증 정보 저 장
             SecurityContext context = SecurityContextHolder.createEmptyContext();

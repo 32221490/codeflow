@@ -17,9 +17,9 @@ public class JwtProvider {
     @Value("${jwt.access-expiration}")
     private long accessExpiration;
 
-// 1. generateAccessToken(Long userId)
-    public String generateAccessToken(String email, String role) {
-        return Jwts.builder().subject(String.valueOf(email)).claim("role", role)
+    // 1. generateAccessToken(Long userId)
+    public String generateAccessToken(Long id, String email, String role) {
+        return Jwts.builder().subject(String.valueOf(id)).claim("email", email).claim("role", role)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + accessExpiration))
                 .signWith(getSigningKey()).compact();

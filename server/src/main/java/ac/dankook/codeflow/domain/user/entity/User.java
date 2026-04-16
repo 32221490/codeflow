@@ -48,14 +48,17 @@ public class User extends BaseTimeEntity {
     @Column(nullable = false)
     private Role role; // ROLE_USER, ROLE_ADMIN
 
+    @Column(nullable = false)
+    private boolean emailVerified;
+
     public static User from(SignupRequest request, String encodedPassword) {
         return new User(null, request.getEmail(), encodedPassword, request.getNickname(), null,
-                LoginType.EMAIL, Role.ROLE_USER);
+                LoginType.EMAIL, Role.ROLE_USER, true);
     }
 
     public static User fromGithub(String email, String nickname, String profileImage) {
         return new User(null, email, null, nickname, profileImage, LoginType.GITHUB,
-                Role.ROLE_ADMIN);
+                Role.ROLE_USER, true);
     }
 
 }

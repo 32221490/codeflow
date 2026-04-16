@@ -72,7 +72,7 @@ export function VisualizerPreview() {
         <span className="text-xs text-slate-500 sm:text-sm">
           Main.java - CodeFlow Visualizer
         </span>
-        <span className="hidden text-xs font-medium text-cyan sm:inline">SSE 연결됨</span>
+        <span className="hidden text-xs font-medium text-cyan sm:inline">실행 완료</span>
       </div>
 
       <div className="grid min-h-[360px] gap-px bg-white/10 lg:grid-cols-[1.15fr_0.85fr]">
