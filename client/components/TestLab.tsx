@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
@@ -25,6 +26,17 @@ type Trace = {
   code: string;
   snapshots: Snapshot[];
   language: Language;
+};
+type TestCase = { input: string; expected: string };
+type TestResult = { input: string; expected: string; actual: string; passed: boolean };
+type Problem = {
+  title: string;
+  difficulty: "입문" | "초급" | "중급" | "상급";
+  description: string;
+  inputFormat: string;
+  outputFormat: string;
+  examples: TestCase[];
+  constraints: string[];
 };
 
 // ─────────────────────────────────────────────
@@ -249,6 +261,38 @@ const TEMPLATES_BY_LANGUAGE: Record<Language, Template[]> = {
 const SUPPORTED_SYNTAX_BY_LANGUAGE: Record<Language, string[]> = {
   java: ["int, String (기본 자료형)", "int[] (배열)", "for / while 루프", "if / else 분기", "재귀 함수 (콜스택)", "swap (tmp 변수)", "System.out.println"],
   python: ["int, str (기본 자료형)", "list (배열)", "for / while 루프", "if / else 분기", "재귀 함수 (콜스택)", "print()"],
+};
+
+// ─────────────────────────────────────────────
+// Dummy problem & test results
+// ─────────────────────────────────────────────
+const DUMMY_PROBLEM: Problem = {
+  title: "배열의 최댓값",
+  difficulty: "초급",
+  description:
+    "N개의 정수로 이루어진 배열이 주어진다. 배열에서 가장 큰 수를 찾아 출력하시오.",
+  inputFormat:
+    "첫째 줄에 배열의 크기 N이 주어진다.\n둘째 줄에 N개의 정수가 공백으로 구분되어 주어진다.",
+  outputFormat: "배열에서 가장 큰 수를 출력한다.",
+  examples: [
+    { input: "4\n3 9 1 7", expected: "9" },
+    { input: "5\n-1 -5 -3 -2 -4", expected: "-1" },
+    { input: "3\n42 42 42", expected: "42" },
+  ],
+  constraints: ["1 ≤ N ≤ 100", "−1,000 ≤ 배열 원소 ≤ 1,000"],
+};
+
+const DUMMY_TEST_RESULTS: TestResult[] = [
+  { input: "4\n3 9 1 7",     expected: "9",  actual: "9",  passed: true  },
+  { input: "5\n-1 -5 -3 -2 -4", expected: "-1", actual: "-1", passed: true  },
+  { input: "3\n42 42 42",    expected: "42", actual: "0",  passed: false },
+];
+
+const DIFFICULTY_COLOR: Record<Problem["difficulty"], string> = {
+  입문: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400",
+  초급: "border-blue/40 bg-blue/10 text-blue",
+  중급: "border-yellow-500/40 bg-yellow-500/10 text-yellow-400",
+  상급: "border-red-500/40 bg-red-500/10 text-red-400",
 };
 
 // ─────────────────────────────────────────────
@@ -614,12 +658,18 @@ function VsCodeWindow({
 // Main component
 // ─────────────────────────────────────────────
 export function TestLab() {
+  const searchParams = useSearchParams();
+  const studyType = searchParams.get("studyType") ?? "";
+  const isAlgorithm = studyType === "알고리즘";
+
   const [selectedLanguage, setSelectedLanguage] = useState<Language>("java");
   const templates = TEMPLATES_BY_LANGUAGE[selectedLanguage];
-  const [phase, setPhase] = useState<"editor" | "visualizer">("editor");
+  const [phase, setPhase] = useState<"editor" | "loading" | "result">("editor");
   const [editorCode, setEditorCode] = useState(TEMPLATES_BY_LANGUAGE.java[0].code);
   const [trace, setTrace] = useState<Trace | null>(null);
   const [activeTemplate, setActiveTemplate] = useState(0);
+
+  const [testResults, setTestResults] = useState<TestResult[] | null>(null);
 
   // Visualizer state
   const [snapshotIndex, setSnapshotIndex] = useState(0);
@@ -648,7 +698,24 @@ export function TestLab() {
     setPhase("editor");
     setIsRunning(false);
     setSnapshotIndex(0);
+    setTestResults(null);
   }, [selectedLanguage]);
+
+  // loading → result transition
+  useEffect(() => {
+    if (phase !== "loading") return;
+    const id = window.setTimeout(() => {
+      if (!isAlgorithm) {
+        const generated = generateTrace(editorCode, selectedLanguage);
+        setTrace(generated);
+        setSnapshotIndex(0);
+        setIsRunning(false);
+      }
+      setTestResults(DUMMY_TEST_RESULTS);
+      setPhase("result");
+    }, 1500);
+    return () => window.clearTimeout(id);
+  }, [phase, editorCode, selectedLanguage, isAlgorithm]);
 
   useEffect(() => {
     if (!isRunning || !trace) return;
@@ -664,85 +731,239 @@ export function TestLab() {
   }, [snapshotIndex]);
 
   const handleSubmit = () => {
-    const generated = generateTrace(editorCode, selectedLanguage);
-    setTrace(generated);
-    setSnapshotIndex(0);
-    setIsRunning(false);
-    setPhase("visualizer");
+    setPhase("loading");
   };
 
   const handleEditCode = () => {
     setIsRunning(false);
     setPhase("editor");
-    // editorCode is preserved — user can edit and resubmit
+    setTestResults(null);
   };
+
+  // ── LOADING PHASE ────────────────────────────
+  if (phase === "loading") {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-bg text-slate-50">
+        <div className="relative flex h-16 w-16 items-center justify-center">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue opacity-25" />
+          <span className="relative inline-flex h-10 w-10 rounded-full bg-gradient-to-br from-blue to-purple" />
+        </div>
+        <div className="text-center">
+          <p className="text-lg font-semibold text-white">채점 중…</p>
+          <p className="mt-1 text-sm text-slate-400">테스트 케이스를 실행하고 있습니다</p>
+        </div>
+        <div className="flex gap-1.5">
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              className="h-2 w-2 animate-bounce rounded-full bg-blue/60"
+              style={{ animationDelay: `${i * 0.15}s` }}
+            />
+          ))}
+        </div>
+      </main>
+    );
+  }
 
   // ── EDITOR PHASE ─────────────────────────────
   if (phase === "editor") {
     return (
       <main className="flex min-h-screen flex-col bg-bg text-slate-50">
+        {/* Header */}
         <header className="sticky top-0 z-30 border-b border-white/10 bg-bg/85 backdrop-blur-xl">
           <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-8">
-            <Link href="/" className="text-sm text-slate-400 transition hover:text-white">
-              ← 메인
-            </Link>
+            <Link href="/" className="text-sm text-slate-400 transition hover:text-white">← 메인</Link>
             <span className="text-sm font-semibold tracking-wide text-blue">CodeFlow · Study</span>
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setSelectedLanguage("java")}
-                className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold transition ${selectedLanguage === "java"
-                  ? "border-orange-400/30 bg-orange-400/10 text-orange-300"
-                  : "border-white/15 text-slate-400 hover:border-white/30 hover:text-slate-200"
-                  }`}
-              >
-                Java
-              </button>
+                className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold transition ${selectedLanguage === "java" ? "border-orange-400/30 bg-orange-400/10 text-orange-300" : "border-white/15 text-slate-400 hover:border-white/30 hover:text-slate-200"}`}
+              >Java</button>
               <button
                 onClick={() => setSelectedLanguage("python")}
-                className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold transition ${selectedLanguage === "python"
-                  ? "border-yellow-400/30 bg-yellow-400/10 text-yellow-300"
-                  : "border-white/15 text-slate-400 hover:border-white/30 hover:text-slate-200"
-                  }`}
-              >
-                Python
-              </button>
+                className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold transition ${selectedLanguage === "python" ? "border-yellow-400/30 bg-yellow-400/10 text-yellow-300" : "border-white/15 text-slate-400 hover:border-white/30 hover:text-slate-200"}`}
+              >Python</button>
             </div>
           </div>
         </header>
 
-        <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-3 px-4 py-6 sm:px-8">
-          {/* Template tabs - full width */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="mr-1 text-[11px] text-slate-500">템플릿</span>
-            {templates.map((t, i) => (
-              <button
-                key={t.label}
-                onClick={() => {
-                  setActiveTemplate(i);
-                  setEditorCode(t.code);
-                }}
-                className={`rounded-md border px-3 py-1 text-xs transition ${activeTemplate === i
-                  ? "border-blue/50 bg-blue/10 text-blue"
-                  : "border-white/10 text-slate-400 hover:border-white/25 hover:text-slate-200"
-                  }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+        {/* Two-column layout */}
+        <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-5 px-4 py-6 sm:px-8 lg:flex-row">
 
-          {/* Editor + Sidebar row */}
-          <div className="flex w-full flex-1 flex-col gap-5 lg:flex-row">
-            {/* ── Editor column ── */}
-            <div className="flex min-w-0 flex-1 flex-col">
-              {/* VS Code-like window */}
-              <VsCodeWindow fileName={fileName} language={languageLabel} lineCount={lineCount}>
-                <div style={{ height: `${editorHeight}px` }}>
+          {/* ── LEFT: Problem Panel ── */}
+          <aside className="w-full shrink-0 lg:sticky lg:top-[56px] lg:h-[calc(100vh-56px)] lg:w-[400px] lg:overflow-y-auto">
+            <div className="flex flex-col gap-3 pb-6">
+
+              {/* Title & description */}
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                <div className="mb-3 flex items-center gap-2">
+                  <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${DIFFICULTY_COLOR[DUMMY_PROBLEM.difficulty]}`}>
+                    {DUMMY_PROBLEM.difficulty}
+                  </span>
+                </div>
+                <h1 className="text-lg font-bold text-white">{DUMMY_PROBLEM.title}</h1>
+                <p className="mt-3 text-sm leading-7 text-slate-300">{DUMMY_PROBLEM.description}</p>
+              </div>
+
+              {/* Input / Output format */}
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">입력</p>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-300">{DUMMY_PROBLEM.inputFormat}</p>
+                <p className="mt-4 text-[11px] font-semibold uppercase tracking-widest text-slate-500">출력</p>
+                <p className="mt-2 text-sm leading-6 text-slate-300">{DUMMY_PROBLEM.outputFormat}</p>
+              </div>
+
+              {/* Examples */}
+              {DUMMY_PROBLEM.examples.map((ex, i) => (
+                <div key={i} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                  <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-slate-500">예제 {i + 1}</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <p className="mb-1 text-[10px] font-medium text-slate-500">입력</p>
+                      <pre className="rounded-lg bg-black/30 px-3 py-2 font-mono text-xs leading-5 text-slate-200">{ex.input}</pre>
+                    </div>
+                    <div>
+                      <p className="mb-1 text-[10px] font-medium text-slate-500">출력</p>
+                      <pre className="rounded-lg bg-black/30 px-3 py-2 font-mono text-xs leading-5 text-slate-200">{ex.expected}</pre>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Constraints */}
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">제한</p>
+                <ul className="mt-2 space-y-1.5">
+                  {DUMMY_PROBLEM.constraints.map((c) => (
+                    <li key={c} className="flex items-start gap-2 text-sm text-slate-300">
+                      <span className="mt-1 shrink-0 text-blue/60">•</span>
+                      {c}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </aside>
+
+          {/* ── RIGHT: Editor Panel ── */}
+          <div className="flex min-w-0 flex-1 flex-col gap-4">
+
+            {/* Template tabs */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="mr-1 text-[11px] text-slate-500">템플릿</span>
+              {templates.map((t, i) => (
+                <button
+                  key={t.label}
+                  onClick={() => { setActiveTemplate(i); setEditorCode(t.code); setTestResults(null); }}
+                  className={`rounded-md border px-3 py-1 text-xs transition ${activeTemplate === i ? "border-blue/50 bg-blue/10 text-blue" : "border-white/10 text-slate-400 hover:border-white/25 hover:text-slate-200"}`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Monaco Editor */}
+            <VsCodeWindow fileName={fileName} language={languageLabel} lineCount={lineCount}>
+              <div style={{ height: `${editorHeight}px` }}>
+                <MonacoEditor
+                  height="100%"
+                  language={selectedLanguage}
+                  value={editorCode}
+                  onChange={(val) => { setEditorCode(val ?? ""); setTestResults(null); }}
+                  theme="vs-dark"
+                  options={{
+                    fontSize: 14,
+                    lineHeight: MONACO_LINE_HEIGHT,
+                    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                    minimap: { enabled: false },
+                    scrollBeyondLastLine: false,
+                    lineNumbers: "on",
+                    roundedSelection: true,
+                    padding: { top: 8, bottom: 8 },
+                    tabSize: 2,
+                    cursorBlinking: "smooth",
+                    smoothScrolling: true,
+                    automaticLayout: true,
+                    contextmenu: true,
+                    renderLineHighlight: "all",
+                    bracketPairColorization: { enabled: true },
+                  }}
+                />
+              </div>
+            </VsCodeWindow>
+
+            {/* Action button */}
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={handleSubmit}
+                className="rounded-xl bg-gradient-to-r from-blue to-purple px-6 py-3 text-sm font-bold text-white shadow-glow transition hover:opacity-90 active:scale-[0.98]"
+              >
+                ▶ 실행 및 채점
+              </button>
+            </div>
+
+            {/* Supported syntax */}
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-slate-500">지원 문법</p>
+              <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+                {SUPPORTED_SYNTAX_BY_LANGUAGE[selectedLanguage].map((item) => (
+                  <li key={item} className="flex gap-1.5">
+                    <span className="text-blue/60">•</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // ── RESULT PHASE ─────────────────────────────
+  const passCount = testResults ? testResults.filter((r) => r.passed).length : 0;
+  const totalCount = testResults ? testResults.length : 0;
+
+  // 알고리즘 모드: 채점 결과 + 제출 코드 표시
+  if (isAlgorithm) {
+    const algoLineCount = editorCode.split("\n").length;
+    const algoEditorHeight = Math.min(600, Math.max(300, algoLineCount * MONACO_LINE_HEIGHT + 24));
+
+    return (
+      <main className="flex min-h-screen flex-col bg-bg text-slate-50">
+        <header className="sticky top-0 z-30 border-b border-white/10 bg-bg/85 backdrop-blur-xl">
+          <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-8">
+            <button
+              onClick={handleEditCode}
+              className="flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-sm text-slate-300 transition hover:border-blue/50 hover:text-white"
+            >
+              ✏ 코드 수정
+            </button>
+            <span className="text-sm font-semibold tracking-wide text-blue">CodeFlow · 채점 결과</span>
+            <span className={`rounded-full border px-2.5 py-0.5 text-xs font-bold ${
+              passCount === totalCount
+                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                : passCount === 0
+                ? "border-red-500/40 bg-red-500/10 text-red-400"
+                : "border-yellow-500/40 bg-yellow-500/10 text-yellow-400"
+            }`}>
+              {passCount} / {totalCount} 통과
+            </span>
+          </div>
+        </header>
+
+        <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-8">
+          <div className="flex flex-col gap-5 lg:flex-row">
+
+            {/* ── 왼쪽: 제출 코드 ── */}
+            <div className="min-w-0 flex-1">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-slate-500">제출 코드</p>
+              <VsCodeWindow fileName={fileName} language={languageLabel} lineCount={algoLineCount}>
+                <div style={{ height: `${algoEditorHeight}px` }}>
                   <MonacoEditor
                     height="100%"
                     language={selectedLanguage}
                     value={editorCode}
-                    onChange={(val) => setEditorCode(val ?? "")}
                     theme="vs-dark"
                     options={{
                       fontSize: 14,
@@ -751,76 +972,74 @@ export function TestLab() {
                       minimap: { enabled: false },
                       scrollBeyondLastLine: false,
                       lineNumbers: "on",
-                      roundedSelection: true,
+                      readOnly: true,
                       padding: { top: 8, bottom: 8 },
                       tabSize: 2,
-                      cursorBlinking: "smooth",
-                      smoothScrolling: true,
                       automaticLayout: true,
-                      contextmenu: true,
-                      renderLineHighlight: "all",
-                      bracketPairColorization: { enabled: true },
+                      renderLineHighlight: "none",
                     }}
                   />
                 </div>
               </VsCodeWindow>
+
+              <div className="mt-4 flex justify-start">
+                <button
+                  onClick={handleEditCode}
+                  className="rounded-xl bg-gradient-to-r from-blue to-purple px-5 py-2.5 text-sm font-bold text-white shadow-glow transition hover:opacity-90"
+                >
+                  ✏ 코드 수정 후 재제출
+                </button>
+              </div>
             </div>
 
-            {/* ── Right sidebar ── */}
-            <div className="flex w-full flex-col gap-4 lg:w-80">
-              {/* How it works */}
-              <div className="rounded-2xl border border-white/10 bg-bg2/70 p-5">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-blue">사용 방법</p>
-                <ol className="mt-3 space-y-2">
-                  {[
-                    "템플릿 선택 또는 직접 코드 작성",
-                    "제출을 눌러 분석 시작",
-                    "Stack / Heap / Output 시각화 확인",
-                    "시각화 중 코드 수정으로 돌아와 재제출",
-                  ].map((label, i) => (
-                    <li key={i} className="flex items-center gap-2 text-sm text-slate-300">
-                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue/20 text-[10px] font-bold text-blue">{i + 1}</span>
-                      <span>{label}</span>
-                    </li>
+            {/* ── 오른쪽: 테스트 케이스 결과 ── */}
+            <div className="w-full lg:w-[380px] lg:shrink-0">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-slate-500">테스트 결과</p>
+              {testResults && (
+                <div className="flex flex-col gap-3">
+                  {testResults.map((r, i) => (
+                    <div
+                      key={i}
+                      className={`rounded-2xl border p-4 ${
+                        r.passed
+                          ? "border-emerald-500/25 bg-emerald-500/[0.06]"
+                          : "border-red-500/25 bg-red-500/[0.06]"
+                      }`}
+                    >
+                      <p className={`mb-3 text-xs font-bold ${r.passed ? "text-emerald-400" : "text-red-400"}`}>
+                        {r.passed ? "✓" : "✗"} 테스트 {i + 1}
+                      </p>
+                      <div className="flex flex-col gap-2 text-[11px]">
+                        <div>
+                          <p className="mb-1 text-slate-500">입력</p>
+                          <pre className="whitespace-pre-wrap rounded-lg bg-black/30 px-2.5 py-2 font-mono leading-5 text-slate-200">{r.input}</pre>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <p className="mb-1 text-slate-500">기댓값</p>
+                            <pre className="rounded-lg bg-black/30 px-2.5 py-2 font-mono text-slate-200">{r.expected}</pre>
+                          </div>
+                          <div>
+                            <p className="mb-1 text-slate-500">실제 출력</p>
+                            <pre className={`rounded-lg px-2.5 py-2 font-mono ${
+                              r.passed ? "bg-emerald-500/10 text-emerald-300" : "bg-red-500/10 text-red-300"
+                            }`}>{r.actual}</pre>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   ))}
-                </ol>
-              </div>
-
-              {/* Supported syntax */}
-              <div className="rounded-2xl border border-white/10 bg-bg2/70 p-5">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">지원 문법</p>
-                <ul className="mt-3 space-y-1 text-xs text-slate-400">
-                  {SUPPORTED_SYNTAX_BY_LANGUAGE[selectedLanguage].map((item) => (
-                    <li key={item} className="flex gap-1.5">
-                      <span className="text-blue/60">•</span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Submit */}
-              <button
-                onClick={handleSubmit}
-                className="rounded-xl bg-gradient-to-r from-blue to-purple px-6 py-3.5 text-sm font-bold text-white shadow-glow transition hover:opacity-90 active:scale-[0.98]"
-              >
-                ▶ 제출 및 시각화
-              </button>
-
-              {/* If we have a previous trace, show re-submit hint */}
-              {trace && (
-                <p className="text-center text-[11px] text-slate-600">
-                  이전: <span className="text-slate-500">{trace.title}</span> · 코드를 수정하고 다시 제출하세요
-                </p>
+                </div>
               )}
             </div>
+
           </div>
         </div>
       </main>
     );
   }
 
-  // ── VISUALIZER PHASE ─────────────────────────
+  // 언어 개념 모드: 채점 결과 + 시각화
   if (!trace || !currentSnapshot) return null;
   const codeLines = trace.code.split("\n");
   const traceLangLabel = trace.language === "java" ? "Java" : "Python";
@@ -844,6 +1063,72 @@ export function TestLab() {
       </header>
 
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-8">
+
+        {/* ── Test Results ── */}
+        {testResults && (
+          <div className="mb-5 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+            {/* Header row */}
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <p className="text-sm font-semibold text-white">채점 결과</p>
+                <span className={`rounded-full border px-2.5 py-0.5 text-xs font-bold ${
+                  passCount === totalCount
+                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                    : passCount === 0
+                    ? "border-red-500/40 bg-red-500/10 text-red-400"
+                    : "border-yellow-500/40 bg-yellow-500/10 text-yellow-400"
+                }`}>
+                  {passCount === totalCount ? "✓" : passCount === 0 ? "✗" : "△"} {passCount} / {totalCount} 통과
+                </span>
+              </div>
+              <button
+                onClick={handleEditCode}
+                className="rounded-lg border border-white/20 px-3 py-1.5 text-xs text-slate-300 transition hover:border-blue/40 hover:text-white"
+              >
+                ✏ 코드 수정
+              </button>
+            </div>
+
+            {/* Per-test cards */}
+            <div className="grid gap-3 sm:grid-cols-3">
+              {testResults.map((r, i) => (
+                <div
+                  key={i}
+                  className={`rounded-xl border p-3.5 ${
+                    r.passed
+                      ? "border-emerald-500/25 bg-emerald-500/[0.06]"
+                      : "border-red-500/25 bg-red-500/[0.06]"
+                  }`}
+                >
+                  <p className={`mb-3 text-xs font-bold ${r.passed ? "text-emerald-400" : "text-red-400"}`}>
+                    {r.passed ? "✓" : "✗"} 테스트 {i + 1}
+                  </p>
+                  <div className="flex flex-col gap-2 text-[11px]">
+                    <div>
+                      <p className="mb-1 text-slate-500">입력</p>
+                      <pre className="whitespace-pre-wrap rounded-lg bg-black/30 px-2.5 py-1.5 font-mono leading-5 text-slate-200">{r.input}</pre>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <p className="mb-1 text-slate-500">기댓값</p>
+                        <pre className="rounded-lg bg-black/30 px-2.5 py-1.5 font-mono text-slate-200">{r.expected}</pre>
+                      </div>
+                      <div>
+                        <p className="mb-1 text-slate-500">실제 출력</p>
+                        <pre className={`rounded-lg px-2.5 py-1.5 font-mono ${
+                          r.passed
+                            ? "bg-emerald-500/10 text-emerald-300"
+                            : "bg-red-500/10 text-red-300"
+                        }`}>{r.actual}</pre>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Control bar */}
         <div className="mb-5 flex flex-col gap-4 rounded-2xl border border-white/10 bg-bg2/70 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
           <div className="min-w-0">
