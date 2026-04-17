@@ -1,5 +1,6 @@
 package ac.dankook.codeflow.domain.user.service;
 
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 import ac.dankook.codeflow.domain.user.dto.UserResponse;
 import ac.dankook.codeflow.domain.user.entity.User;
