@@ -56,7 +56,10 @@ public class SecurityConfig {
                                 // 요청 권한 설정
                                 .authorizeHttpRequests(auth -> auth
                                                 // 인증 없이 허용
-                                                .requestMatchers("/api/auth/**", "/actuator/**")
+                                                .requestMatchers("/api/auth/**", "/actuator/**",
+                                                                "/swagger-ui/**",
+                                                                "/swagger-ui.html",
+                                                                "/v3/api-docs/**", "/v3/api-docs")
                                                 .permitAll()
                                                 // 나머지는 일단 전체 허용 (나중에 인증 추가)
                                                 .anyRequest().permitAll())
