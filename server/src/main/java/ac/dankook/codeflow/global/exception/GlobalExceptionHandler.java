@@ -7,7 +7,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import ac.dankook.codeflow.global.response.ApiResponse;
+import ac.dankook.codeflow.global.response.CommonResponse;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -15,25 +15,25 @@ import lombok.extern.slf4j.Slf4j;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e) {
+    public ResponseEntity<CommonResponse<Void>> handleBusinessException(BusinessException e) {
         log.warn("BusinessException: {}", e.getMessage());
-        return ResponseEntity.status(e.getErrorCode().getStatus()).body(ApiResponse.error(e.getMessage()));
+        return ResponseEntity.status(e.getErrorCode().getStatus()).body(CommonResponse.error(e.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Void>> handleValidationException(MethodArgumentNotValidException e) {
+    public ResponseEntity<CommonResponse<Void>> handleValidationException(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getFieldErrors().stream()
                 .findFirst()
                 .map(FieldError::getDefaultMessage)
                 .orElse("입력값이 올바르지 않습니다.");
         log.warn("ValidationException: {}", message);
-        return ResponseEntity.badRequest().body(ApiResponse.error(message));
+        return ResponseEntity.badRequest().body(CommonResponse.error(message));
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
+    public ResponseEntity<CommonResponse<Void>> handleException(Exception e) {
         log.error("Unhandled exception", e);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("서버 오류가 발생했습니다."));
+                .body(CommonResponse.error("서버 오류가 발생했습니다."));
     }
 }

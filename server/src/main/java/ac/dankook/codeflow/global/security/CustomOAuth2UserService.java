@@ -3,7 +3,6 @@ package ac.dankook.codeflow.global.security;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -39,17 +38,15 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         Map<String, Object> attributes = new HashMap<>(oAuth2User.getAttributes());
         attributes.put("email", email);
 
-        return new DefaultOAuth2User(
-                oAuth2User.getAuthorities(),
-                attributes,
-                "login" // GitHub의 유저명 필드 (nameAttributeKey)
+        return new DefaultOAuth2User(oAuth2User.getAuthorities(), attributes, "login" // GitHub의 유저명
+                                                                                      // 필드
+                                                                                      // (nameAttributeKey)
         );
     }
 
     /**
-     * GitHub /user/emails API 호출
-     * 응답 예시: [{ "email": "xxx@gmail.com", "primary": true, "verified": true }, ...]
-     * primary이고 verified인 이메일을 반환
+     * GitHub /user/emails API 호출 응답 예시: [{ "email": "xxx@gmail.com", "primary": true, "verified":
+     * true }, ...] primary이고 verified인 이메일을 반환
      */
     private String fetchPrimaryEmail(String token) {
         RestTemplate restTemplate = new RestTemplate();
@@ -58,19 +55,16 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         headers.setBearerAuth(token);
         headers.set("Accept", "application/vnd.github+json");
 
-        ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
-                "https://api.github.com/user/emails",
-                HttpMethod.GET,
-                new HttpEntity<>(headers),
-                new ParameterizedTypeReference<>() {}
-        );
+        ResponseEntity<List<Map<String, Object>>> response =
+                restTemplate.exchange("https://api.github.com/user/emails", HttpMethod.GET,
+                        new HttpEntity<>(headers), new ParameterizedTypeReference<>() {});
 
-        if (response.getBody() == null) return null;
+        if (response.getBody() == null)
+            return null;
 
         return response.getBody().stream()
-                .filter(e -> Boolean.TRUE.equals(e.get("primary")) && Boolean.TRUE.equals(e.get("verified")))
-                .map(e -> (String) e.get("email"))
-                .findFirst()
-                .orElse(null);
+                .filter(e -> Boolean.TRUE.equals(e.get("primary"))
+                        && Boolean.TRUE.equals(e.get("verified")))
+                .map(e -> (String) e.get("email")).findFirst().orElse(null);
     }
 }
