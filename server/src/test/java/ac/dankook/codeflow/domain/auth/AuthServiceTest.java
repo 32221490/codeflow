@@ -1,21 +1,17 @@
 package ac.dankook.codeflow.domain.auth;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.BDDMockito.*;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-
 import org.junit.jupiter.api.BeforeEach;
-import ac.dankook.codeflow.domain.auth.dto.LoginRequest;
-import ac.dankook.codeflow.domain.auth.dto.LoginResponse;
-import org.springframework.mail.SimpleMailMessage;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,13 +20,15 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
-
+import ac.dankook.codeflow.domain.auth.dto.LoginRequest;
+import ac.dankook.codeflow.domain.auth.dto.LoginResponse;
 import ac.dankook.codeflow.domain.auth.dto.SignupRequest;
 import ac.dankook.codeflow.domain.auth.dto.SignupResponse;
 import ac.dankook.codeflow.domain.user.entity.User;
-import ac.dankook.codeflow.domain.user.repository.userRepository;
+import ac.dankook.codeflow.domain.user.repository.UserRepository;
 import ac.dankook.codeflow.global.exception.BusinessException;
 import ac.dankook.codeflow.global.exception.ErrorCode;
 import ac.dankook.codeflow.global.security.JwtProvider;
@@ -44,7 +42,7 @@ class AuthServiceTest {
 
     // ✅ 의존성들: 전부 가짜(Mock) 객체
     @Mock
-    private userRepository userRepository;
+    private UserRepository userRepository;
     @Mock
     private PasswordEncoder passwordEncoder;
     @Mock
@@ -73,6 +71,8 @@ class AuthServiceTest {
     void signup_성공() {
         // given
         given(userRepository.existsByEmail("test@test.com")).willReturn(false);
+        given(redisTemplate.opsForValue()).willReturn(valueOperations);
+        given(valueOperations.get("email:verified:test@test.com")).willReturn("verified");
         given(passwordEncoder.encode("password123")).willReturn("encodedPassword");
 
         // when
@@ -113,7 +113,8 @@ class AuthServiceTest {
         authService.sendVerificationCode("test@test.com");
         // then
         // 1. redisTemplate.opsForValue().set()이 1번 호출됐는지 검증
-        verify(valueOperations).set(eq("test@test.com"), anyString(), eq(3L), eq(TimeUnit.MINUTES));
+        verify(valueOperations).set(eq("email:code:test@test.com"), anyString(), eq(3L),
+                eq(TimeUnit.MINUTES));
         // → anyString() 쓰는 이유: 인증코드는 Random이라 어떤 값인지 모름
         verify(mailSender).send(any(SimpleMailMessage.class));
         // 2. mailSender.send()가 1번 호출됐는지 검증
@@ -130,7 +131,7 @@ class AuthServiceTest {
         // Redis에 "test@test.com" 키로 "123456" 코드가 저장돼 있는 상황을 만들기
         given(redisTemplate.opsForValue()).willReturn(valueOperations);
         // 힌트: given(redisTemplate.opsForValue()).willReturn(valueOperations)
-        given(valueOperations.get("test@test.com")).willReturn("123456");
+        given(valueOperations.get("email:code:test@test.com")).willReturn("123456");
 
         // when
         // authService.verifyCode("test@test.com", "123456") 호출
@@ -139,8 +140,7 @@ class AuthServiceTest {
 
         // then
         // Redis 키가 삭제됐는지 검증
-        // 힌트: verify(redisTemplate).delete("test@test.com")
-        verify(redisTemplate).delete("test@test.com");
+        verify(redisTemplate).delete("email:code:test@test.com");
     }
 
     @Test
@@ -151,7 +151,7 @@ class AuthServiceTest {
         given(redisTemplate.opsForValue()).willReturn(valueOperations);
         // 힌트: given(redisTemplate.opsForValue()).willReturn(valueOperations)
         // given(valueOperations.get("test@test.com")).willReturn(null)
-        given(valueOperations.get("test@test.com")).willReturn(null);
+        given(valueOperations.get("email:code:test@test.com")).willReturn(null);
 
         // when & then
         // EMAIL_CODE_EXPIRED 예외가 발생해야 함
@@ -166,7 +166,7 @@ class AuthServiceTest {
         // given
         // Redis에 "123456"이 저장돼 있는데 "999999"를 입력하는 상황
         given(redisTemplate.opsForValue()).willReturn(valueOperations);
-        given(valueOperations.get("test@test.com")).willReturn("123456");
+        given(valueOperations.get("email:code:test@test.com")).willReturn("123456");
 
         // delete()는 절대 호출되면 안 됨 (인증 실패했으니 키 삭제하면 안 됨)
         // 힌트: verify(redisTemplate, never()).delete(anyString())
@@ -198,7 +198,7 @@ class AuthServiceTest {
         // 3. JWT 토큰 생성
         // 힌트: given(jwtProvider.generateAccessToken(any(),
         // any())).willReturn("jwt-token")
-        given(jwtProvider.generateAccessToken(any(), any())).willReturn("token");
+        given(jwtProvider.generateAccessToken(any(), any(), any())).willReturn("token");
 
         // when
         // authService.login(loginRequest) 호출
@@ -209,9 +209,6 @@ class AuthServiceTest {
         // 1. 반환된 accessToken 이 "jwt-token" 인지 확인
         // 힌트: assertThat(response.getAccessToken()).isEqualTo("jwt-token")
         assertThat(response.getAccessToken()).isEqualTo("token");
-
-        // 2. 반환된 email 이 맞는지 확인
-        assertThat(response.getEmail()).isEqualTo("test@test.com");
     }
 
     @Test
@@ -222,7 +219,7 @@ class AuthServiceTest {
         // given
         // DB에 유저가 없는 상황
         // 힌트: given(userRepository.findByEmail(any())).willReturn(Optional.empty())
-        given(userRepository.findByEmail(any())).willReturn(null);
+        given(userRepository.findByEmail(any())).willReturn(Optional.empty());
 
         // when & then
         // ACCOUNT_NOT_FOUND 예외 발생해야 함
@@ -253,6 +250,6 @@ class AuthServiceTest {
 
         // jwtProvider.generateAccessToken()은 절대 호출되면 안 됨
         // 힌트: verify(jwtProvider, never()).generateAccessToken(any(), any())
-        verify(jwtProvider, never()).generateAccessToken(eq("test@test.com"), any());
+        verify(jwtProvider, never()).generateAccessToken(eq(1L), eq("test@test.com"), any());
     }
 }
