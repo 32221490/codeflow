@@ -6,10 +6,7 @@ import ac.dankook.codeflow.domain.user.entity.User;
 
 
 
-public interface UserRepository extends JpaRepository<User, Long> { // 버그 수정: <Long, User> → <User,
-                                                                    // Long>
-
-
+public interface UserRepository extends JpaRepository<User, Long> {
     // 이메일로 사용자 조회 (회원가입 중복 체크, 로그인 등에서 사용)
     Optional<User> findByEmail(String email);
 

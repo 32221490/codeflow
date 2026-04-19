@@ -21,17 +21,16 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class UserController {
 
-    private final UserService userService;
+        private final UserService userService;
 
-    @Operation(summary = "내 정보 조회", description = "JWT 토큰으로 인증된 사용자의 정보를 반환합니다.",
-            security = @SecurityRequirement(name = "Bearer"))
-    @ApiResponses({
-            @ApiResponse(responseCode = "200",
-                    description = "조회 성공"),
-            @ApiResponse(responseCode = "401",
-                    description = "인증 필요")})
-    @GetMapping("/me")
-    public ResponseEntity<CommonResponse<UserResponse>> getMe(@AuthenticationPrincipal String userId) {
-        return ResponseEntity.ok(CommonResponse.success(userService.getMe(Long.parseLong(userId))));
-    }
+        @Operation(summary = "내 정보 조회", description = "JWT 토큰으로 인증된 사용자의 정보를 반환합니다.",
+                        security = @SecurityRequirement(name = "Bearer"))
+        @ApiResponses({@ApiResponse(responseCode = "200", description = "조회 성공"),
+                        @ApiResponse(responseCode = "401", description = "인증 필요")})
+        @GetMapping("/me")
+        public ResponseEntity<CommonResponse<UserResponse>> getMe(
+                        @AuthenticationPrincipal String userId) {
+                return ResponseEntity.ok(
+                                CommonResponse.success(userService.getMe(Long.parseLong(userId))));
+        }
 }

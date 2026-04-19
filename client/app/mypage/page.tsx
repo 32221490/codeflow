@@ -21,17 +21,85 @@ interface MyProblem {
 
 const DUMMY_PROBLEMS: MyProblem[] = [
   // 풀었던 문제
-  { id: 1, title: "투 포인터 입문", category: "배열", difficulty: "쉬움", status: "solved", date: "2025-04-10" },
-  { id: 2, title: "스택으로 괄호 검사", category: "스택", difficulty: "쉬움", status: "solved", date: "2025-04-08" },
-  { id: 5, title: "재귀로 구현하는 팩토리얼", category: "재귀", difficulty: "쉬움", status: "solved", date: "2025-04-05" },
-  { id: 7, title: "이진 탐색 기초", category: "탐색", difficulty: "보통", status: "solved", date: "2025-04-01" },
+  {
+    id: 1,
+    title: "투 포인터 입문",
+    category: "배열",
+    difficulty: "쉬움",
+    status: "solved",
+    date: "2025-04-10",
+  },
+  {
+    id: 2,
+    title: "스택으로 괄호 검사",
+    category: "스택",
+    difficulty: "쉬움",
+    status: "solved",
+    date: "2025-04-08",
+  },
+  {
+    id: 5,
+    title: "재귀로 구현하는 팩토리얼",
+    category: "재귀",
+    difficulty: "쉬움",
+    status: "solved",
+    date: "2025-04-05",
+  },
+  {
+    id: 7,
+    title: "이진 탐색 기초",
+    category: "탐색",
+    difficulty: "보통",
+    status: "solved",
+    date: "2025-04-01",
+  },
   // 풀던 문제
-  { id: 3, title: "BFS로 최단 경로 찾기", category: "그래프", difficulty: "보통", status: "inprogress", date: "2025-04-12", progress: 60 },
-  { id: 4, title: "DP 첫걸음 — 계단 오르기", category: "동적 프로그래밍", difficulty: "보통", status: "inprogress", date: "2025-04-11", progress: 30 },
+  {
+    id: 3,
+    title: "BFS로 최단 경로 찾기",
+    category: "그래프",
+    difficulty: "보통",
+    status: "inprogress",
+    date: "2025-04-12",
+    progress: 60,
+  },
+  {
+    id: 4,
+    title: "DP 첫걸음 — 계단 오르기",
+    category: "동적 프로그래밍",
+    difficulty: "보통",
+    status: "inprogress",
+    date: "2025-04-11",
+    progress: 30,
+  },
   // 생성한 문제
-  { id: 101, title: "나만의 슬라이딩 윈도우 문제", category: "배열", difficulty: "보통", status: "created", date: "2025-04-09", language: "Java" },
-  { id: 102, title: "커스텀 DFS 미로 탈출", category: "그래프", difficulty: "어려움", status: "created", date: "2025-04-06", language: "Python" },
-  { id: 103, title: "그리디 동전 거스름돈", category: "그리디", difficulty: "쉬움", status: "created", date: "2025-04-02", language: "Java" },
+  {
+    id: 101,
+    title: "나만의 슬라이딩 윈도우 문제",
+    category: "배열",
+    difficulty: "보통",
+    status: "created",
+    date: "2025-04-09",
+    language: "Java",
+  },
+  {
+    id: 102,
+    title: "커스텀 DFS 미로 탈출",
+    category: "그래프",
+    difficulty: "어려움",
+    status: "created",
+    date: "2025-04-06",
+    language: "Python",
+  },
+  {
+    id: 103,
+    title: "그리디 동전 거스름돈",
+    category: "그리디",
+    difficulty: "쉬움",
+    status: "created",
+    date: "2025-04-02",
+    language: "Java",
+  },
 ];
 
 const DUMMY_USER = {
@@ -51,7 +119,15 @@ const DIFFICULTY_STYLE: Record<Difficulty, string> = {
   어려움: "bg-rose-400/10 text-rose-400 border border-rose-400/20",
 };
 
-function StatCard({ label, value, sub }: { label: string; value: number | string; sub?: string }) {
+function StatCard({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: number | string;
+  sub?: string;
+}) {
   return (
     <div className="panel-border rounded-2xl bg-bg2/70 p-5 text-center">
       <p className="text-3xl font-bold text-white">{value}</p>
@@ -74,7 +150,9 @@ function ProblemRow({ problem }: { problem: MyProblem }) {
           <span className="rounded-full border border-blue/20 bg-blue/10 px-2.5 py-0.5 text-xs font-medium text-blue">
             {problem.category}
           </span>
-          <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${DIFFICULTY_STYLE[problem.difficulty]}`}>
+          <span
+            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${DIFFICULTY_STYLE[problem.difficulty]}`}
+          >
             {problem.difficulty}
           </span>
           {problem.language && (
@@ -94,7 +172,9 @@ function ProblemRow({ problem }: { problem: MyProblem }) {
               style={{ width: `${problem.progress}%` }}
             />
           </div>
-          <span className="text-xs text-slate-400 w-7 text-right">{problem.progress}%</span>
+          <span className="text-xs text-slate-400 w-7 text-right">
+            {problem.progress}%
+          </span>
         </div>
       )}
 
@@ -105,7 +185,11 @@ function ProblemRow({ problem }: { problem: MyProblem }) {
           href={`/study?id=${problem.id}`}
           className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 transition hover:border-blue/40 hover:text-blue"
         >
-          {problem.status === "solved" ? "다시 풀기" : problem.status === "inprogress" ? "이어 풀기" : "보기"}
+          {problem.status === "solved"
+            ? "다시 풀기"
+            : problem.status === "inprogress"
+              ? "이어 풀기"
+              : "보기"}
         </a>
       </div>
     </div>
@@ -140,9 +224,13 @@ export default function MyPage() {
           </div>
 
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-white">{DUMMY_USER.nickname}</h1>
+            <h1 className="text-2xl font-bold text-white">
+              {DUMMY_USER.nickname}
+            </h1>
             <p className="mt-0.5 text-sm text-slate-400">{DUMMY_USER.email}</p>
-            <p className="mt-1 text-xs text-slate-500">가입일 {DUMMY_USER.joinDate}</p>
+            <p className="mt-1 text-xs text-slate-500">
+              가입일 {DUMMY_USER.joinDate}
+            </p>
           </div>
         </div>
 
@@ -150,7 +238,11 @@ export default function MyPage() {
         <div className="mb-10 grid grid-cols-3 gap-4">
           <StatCard label="푼 문제" value={DUMMY_USER.solvedCount} sub="개" />
           <StatCard label="연속 학습" value={DUMMY_USER.streak} sub="일째" />
-          <StatCard label="생성한 문제" value={DUMMY_USER.createdCount} sub="개" />
+          <StatCard
+            label="생성한 문제"
+            value={DUMMY_USER.createdCount}
+            sub="개"
+          />
         </div>
 
         {/* 탭 */}

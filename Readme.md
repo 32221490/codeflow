@@ -54,11 +54,19 @@
 
 <br/>
 
-<!-- ## 🏗 System Architecture
+## 🏗 System Architecture
 
 <div align="center">
-  <img src="./docs/assets/system-architecture.svg" width="80%"/>
-</div> -->
+  <img src="./docs/assets/Architecture.jpg" width="80%"/>
+</div>
+<br/>
+
+## 🗄 ERD
+
+<div align="center">
+  <img src="./docs/assets/erd.png" width="80%"/>
+</div>
+<br/>
 
 ## ⚙️ 실행 흐름
 
@@ -82,13 +90,13 @@ React Flow 기반 시각화
 
 ```ts
 export interface SnapshotEvent {
-    line: number;
-    stack: StackVar[];
-    heap: HeapItem[];
-    status: 'active' | 'done' | 'error';
-    errorLine?: number;
-    errorMsg?: string;
-    output?: string;
+  line: number;
+  stack: StackVar[];
+  heap: HeapItem[];
+  status: "active" | "done" | "error";
+  errorLine?: number;
+  errorMsg?: string;
+  output?: string;
 }
 ```
 
