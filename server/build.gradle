@@ -52,8 +52,3 @@ tasks.named('test') {
 	useJUnitPlatform()
 }
 
-// DockerBuilder 단독 테스트 실행
-tasks.register('runDockerBuilder', JavaExec) {
-	classpath = sourceSets.main.runtimeClasspath
-	mainClass = 'ac.dankook.codeflow.dockerapi.DockerBuilderRunner'
-}

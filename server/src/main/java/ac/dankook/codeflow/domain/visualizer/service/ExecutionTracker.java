@@ -1,4 +1,4 @@
-package ac.dankook.codeflow.dockerapi;
+package ac.dankook.codeflow.domain.visualizer.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.jdi.*;
@@ -21,19 +21,16 @@ import java.util.*;
  *   4. VMDeath or VMDisconnect 수신 시 종료 → JSON 직렬화 반환
  */
 @Slf4j
-public class ExecutionTracer {
+public class ExecutionTracker {
 
-    /** 무한루프 등 방지를 위한 최대 스텝 수 */
-    private static final int MAX_STEPS = 1000;
-
-    /** 이벤트 대기 타임아웃 (ms) - 이 시간 내 이벤트가 없으면 종료 */
+    private static final int MAX_STEPS        = 1000;
     private static final int EVENT_TIMEOUT_MS = 10_000;
 
     private final String host;
     private final int port;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public ExecutionTracer(String host, int port) {
+    public ExecutionTracker(String host, int port) {
         this.host = host;
         this.port = port;
     }
@@ -50,7 +47,6 @@ public class ExecutionTracer {
         try {
             EventRequestManager erm = vm.eventRequestManager();
 
-            // Sample 클래스가 로드될 때 이벤트 발생하도록 등록
             ClassPrepareRequest cpr = erm.createClassPrepareRequest();
             cpr.addClassFilter("Sample");
             cpr.enable();
@@ -70,13 +66,12 @@ public class ExecutionTracer {
 
                 for (Event event : eventSet) {
                     if (event instanceof ClassPrepareEvent cpe) {
-                        // Sample 클래스가 로드되면 한 줄씩 추적하는 StepRequest 등록
                         StepRequest sr = erm.createStepRequest(
                                 cpe.thread(),
                                 StepRequest.STEP_LINE,
-                                StepRequest.STEP_INTO   // Sample 내부 메서드도 추적
+                                StepRequest.STEP_INTO
                         );
-                        sr.addClassFilter("Sample");    // JDK 내부 클래스는 추적 제외
+                        sr.addClassFilter("Sample");
                         sr.enable();
 
                     } else if (event instanceof StepEvent se) {
@@ -103,10 +98,6 @@ public class ExecutionTracer {
         return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(steps);
     }
 
-    // -------------------------------------------------------------------------
-    // JDI 연결
-    // -------------------------------------------------------------------------
-
     private VirtualMachine connect() throws Exception {
         VirtualMachineManager vmm = Bootstrap.virtualMachineManager();
 
@@ -124,13 +115,6 @@ public class ExecutionTracer {
         return connector.attach(args);
     }
 
-    // -------------------------------------------------------------------------
-    // 스텝 정보 캡처
-    // -------------------------------------------------------------------------
-
-    /**
-     * StepEvent에서 현재 라인, 메서드, 지역 변수, 콜스택을 수집한다.
-     */
     private Map<String, Object> captureStep(StepEvent event, int stepNumber) {
         Map<String, Object> step = new LinkedHashMap<>();
         step.put("step", stepNumber);
@@ -154,7 +138,6 @@ public class ExecutionTracer {
                 variables.put(var.name(), serializeValue(frame.getValue(var)));
             }
         } catch (AbsentInformationException e) {
-            // -g 옵션 없이 컴파일 시 디버그 정보가 없는 경우
             variables.put("_note", "debug info unavailable (compile with -g)");
         } catch (Exception e) {
             variables.put("_error", e.getMessage());
@@ -177,26 +160,18 @@ public class ExecutionTracer {
         return stack;
     }
 
-    // -------------------------------------------------------------------------
-    // 값 직렬화
-    // -------------------------------------------------------------------------
-
-    /**
-     * JDI Value를 JSON 직렬화 가능한 Java 객체로 변환한다.
-     * 객체 참조는 무한 재귀를 피하기 위해 타입명@id 형식으로 변환한다.
-     */
     private Object serializeValue(Value value) {
         if (value == null) return null;
 
         return switch (value) {
-            case IntegerValue v  -> v.value();
-            case LongValue v     -> v.value();
-            case DoubleValue v   -> v.value();
-            case FloatValue v    -> v.value();
-            case BooleanValue v  -> v.value();
-            case CharValue v     -> String.valueOf(v.value());
-            case ByteValue v     -> v.value();
-            case ShortValue v    -> v.value();
+            case IntegerValue v    -> v.value();
+            case LongValue v       -> v.value();
+            case DoubleValue v     -> v.value();
+            case FloatValue v      -> v.value();
+            case BooleanValue v    -> v.value();
+            case CharValue v       -> String.valueOf(v.value());
+            case ByteValue v       -> v.value();
+            case ShortValue v      -> v.value();
             case StringReference v -> v.value();
             case ArrayReference v  -> {
                 List<Object> list = new ArrayList<>();
@@ -205,10 +180,8 @@ public class ExecutionTracer {
                 }
                 yield list;
             }
-            case ObjectReference v ->
-                // 객체는 타입명 + 고유 ID로 표현 (순환 참조 방지)
-                value.type().name() + "@" + v.uniqueID();
-            default -> value.toString();
+            case ObjectReference v -> value.type().name() + "@" + v.uniqueID();
+            default                -> value.toString();
         };
     }
 }
