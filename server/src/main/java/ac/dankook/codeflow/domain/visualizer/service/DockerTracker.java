@@ -1,6 +1,7 @@
 package ac.dankook.codeflow.domain.visualizer.service;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
@@ -20,9 +21,10 @@ import java.nio.file.*;
  *   6. JDWP 포트 준비 확인 후 ExecutionTracker 연결
  *   7. 추적 완료 후 컨테이너 정리
  */
-@Slf4j
 @Service
 public class DockerTracker {
+
+    private static final Logger log = LoggerFactory.getLogger(DockerTracker.class);
 
     private static final int    JDWP_PORT       = 5005;
     private static final String DOCKER_IMAGE    = "eclipse-temurin:21-jdk-jammy";

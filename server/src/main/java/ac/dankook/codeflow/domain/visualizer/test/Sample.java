@@ -1,3 +1,5 @@
+package ac.dankook.codeflow.domain.visualizer.test;
+
 /**
  * 시각화 대상 샘플 코드.
  * DockerTracker가 이 파일을 읽어 Docker 컨테이너 안에서 실행한다.

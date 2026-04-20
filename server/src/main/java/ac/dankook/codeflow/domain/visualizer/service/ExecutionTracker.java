@@ -6,7 +6,8 @@ import com.sun.jdi.connect.AttachingConnector;
 import com.sun.jdi.connect.Connector;
 import com.sun.jdi.event.*;
 import com.sun.jdi.request.*;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
@@ -20,8 +21,9 @@ import java.util.*;
  *   3. StepEvent마다 현재 라인 / 지역 변수 / 콜스택 캡처
  *   4. VMDeath or VMDisconnect 수신 시 종료 → JSON 직렬화 반환
  */
-@Slf4j
 public class ExecutionTracker {
+
+    private static final Logger log = LoggerFactory.getLogger(ExecutionTracker.class);
 
     private static final int MAX_STEPS        = 1000;
     private static final int EVENT_TIMEOUT_MS = 10_000;
