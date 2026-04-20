@@ -11,7 +11,7 @@ import java.nio.file.*;
 /**
  * Java 소스 코드를 Docker 컨테이너 안에서 실행하고,
  * JDI(ExecutionTracker)를 통해 실행 흐름을 추적하여 JSON으로 반환한다.
- *
+ * 
  * 실행 순서:
  *   1. 소스 코드를 임시 파일로 저장
  *   2. Docker 컨테이너 기동 (JDWP 포트 5005 노출)
