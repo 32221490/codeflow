@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.*;
 
@@ -26,7 +27,6 @@ public class DockerTracker {
 
     private static final Logger log = LoggerFactory.getLogger(DockerTracker.class);
 
-    private static final int    JDWP_PORT       = 5005;
     private static final String DOCKER_IMAGE    = "eclipse-temurin:21-jdk-jammy";
     private static final int    PORT_WAIT_MS    = 15_000;
     private static final int    CONTAINER_TTL_S = 120;
@@ -52,9 +52,10 @@ public class DockerTracker {
 
     private TraceResult runAndTraceFile(String javaFilePath) throws Exception {
         String containerName = "codeflow-" + System.currentTimeMillis();
+        int jdwpPort = findFreePort();
 
-        log.info("[DockerTracker] 컨테이너 시작: {}", containerName);
-        startContainer(containerName);
+        log.info("[DockerTracker] 컨테이너 시작: {} (JDWP 포트: {})", containerName, jdwpPort);
+        startContainer(containerName, jdwpPort);
 
         try {
             log.info("[DockerTracker] 소스 파일 복사: {}", javaFilePath);
@@ -67,13 +68,13 @@ public class DockerTracker {
             String programOutput = captureOutput(containerName);
 
             log.info("[DockerTracker] JDWP 모드로 JVM 기동");
-            runWithJdwp(containerName);
+            runWithJdwp(containerName, jdwpPort);
 
             log.info("[DockerTracker] JDWP 포트 대기 중...");
-            waitForPort(JDWP_PORT, PORT_WAIT_MS);
+            waitForPort(jdwpPort, PORT_WAIT_MS);
 
             log.info("[DockerTracker] ExecutionTracker 시작");
-            ExecutionTracker tracker = new ExecutionTracker("localhost", JDWP_PORT);
+            ExecutionTracker tracker = new ExecutionTracker("localhost", jdwpPort);
             String traceJson = tracker.trace();
 
             return new TraceResult(programOutput, traceJson);
@@ -81,6 +82,12 @@ public class DockerTracker {
         } finally {
             log.info("[DockerTracker] 컨테이너 정리: {}", containerName);
             stopAndRemove(containerName);
+        }
+    }
+
+    private int findFreePort() throws IOException {
+        try (ServerSocket s = new ServerSocket(0)) {
+            return s.getLocalPort();
         }
     }
 
@@ -95,10 +102,10 @@ public class DockerTracker {
         return output.trim();
     }
 
-    private void startContainer(String name) throws Exception {
+    private void startContainer(String name, int jdwpPort) throws Exception {
         Process p = new ProcessBuilder(
                 "docker", "run", "-d",
-                "-p", JDWP_PORT + ":" + JDWP_PORT,
+                "-p", jdwpPort + ":" + jdwpPort,
                 "--name", name,
                 DOCKER_IMAGE,
                 "sleep", String.valueOf(CONTAINER_TTL_S)
@@ -149,11 +156,11 @@ public class DockerTracker {
         }
     }
 
-    private void runWithJdwp(String name) throws Exception {
+    private void runWithJdwp(String name, int jdwpPort) throws Exception {
         new ProcessBuilder(
                 "docker", "exec", "-d", name,
                 "java",
-                "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:" + JDWP_PORT,
+                "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:" + jdwpPort,
                 "-cp", "/workspace",
                 "Sample"
         ).start();
