@@ -10,7 +10,9 @@ COPY src src
 
 RUN chmod +x gradlew && ./gradlew bootJar -x test --no-daemon
 
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:21-jdk-alpine
+
+RUN apk add --no-cache docker-cli
 
 WORKDIR /app
 
