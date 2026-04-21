@@ -2,6 +2,7 @@ package ac.dankook.codeflow.domain.visualizer.controller;
 
 import ac.dankook.codeflow.domain.visualizer.dto.AnswerCheckResponse;
 import ac.dankook.codeflow.domain.visualizer.dto.JdiResponse;
+import ac.dankook.codeflow.domain.visualizer.dto.TraceResponse;
 import ac.dankook.codeflow.domain.visualizer.service.DockerTracker;
 import ac.dankook.codeflow.global.response.CommonResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,8 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 @Tag(name = "DockerTracker", description = "DockerTracker API")
 @RestController
@@ -35,15 +34,16 @@ public class VisualizerController {
             @ApiResponse(responseCode = "500", description = "실행 오류 (컴파일 실패, Docker 오류 등)")
     })
     @PostMapping("/trace")
-    public ResponseEntity<CommonResponse<Map<String, Object>>> trace() throws Exception {
+    public ResponseEntity<CommonResponse<TraceResponse>> trace() throws Exception {
         String sourceCode = Files.readString(Path.of(SAMPLE_PATH).toAbsolutePath());
 
         DockerTracker.TraceResult result = dockerTracker.runAndTrace(sourceCode);
 
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("answerCheck", new AnswerCheckResponse(result.programOutput()));
-        data.put("jdi", new JdiResponse(result.traceJson()));
+        TraceResponse response = new TraceResponse(
+                new AnswerCheckResponse(result.programOutput()),
+                new JdiResponse(result.traceJson())
+        );
 
-        return ResponseEntity.ok(CommonResponse.success(data));
+        return ResponseEntity.ok(CommonResponse.success(response));
     }
 }
