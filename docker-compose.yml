@@ -18,6 +18,7 @@ services:
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
       OAUTH2_REDIRECT_URI: ${OAUTH2_REDIRECT_URI}
+      GOOGLE_GEMINI_API_KEY: ${GOOGLE_GEMINI_API_KEY}
     depends_on:
       mysql:
         condition: service_healthy

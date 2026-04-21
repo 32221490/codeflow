@@ -6,6 +6,8 @@ import java.util.Map;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.RestClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,6 +16,7 @@ import ac.dankook.codeflow.domain.problem.dto.GeminiResponse;
 @DisplayName("Gemini API 응답 확인 (수동 실행)")
 class GeminiApiTest {
 
+        private static final Logger log = LoggerFactory.getLogger(GeminiApiTest.class);
         private static final String API_KEY = System.getenv("GOOGLE_GEMINI_API_KEY");
         private static final String BASE_URL =
                         "https://generativelanguage.googleapis.com/v1beta/models";
@@ -30,14 +33,14 @@ class GeminiApiTest {
                                                 "You are a professional coding tutor."))));
 
                 String rawJson = restClient.post()
-                                .uri(uri -> uri.path("/gemini-1.5-flash:generateContent")
+                                .uri(uri -> uri.path("/gemini-flash-latest:generateContent")
                                                 .queryParam("key", API_KEY).build())
                                 .contentType(MediaType.APPLICATION_JSON).body(requestBody)
                                 .retrieve().body(String.class);
 
-                System.out.println("=== RAW JSON ===");
-                System.out.println(new ObjectMapper().writerWithDefaultPrettyPrinter()
-                                .writeValueAsString(new ObjectMapper().readTree(rawJson)));
+                String pretty = new ObjectMapper().writerWithDefaultPrettyPrinter()
+                                .writeValueAsString(new ObjectMapper().readTree(rawJson));
+                log.info("=== RAW JSON ===\n{}", pretty);
         }
 
         @Test
@@ -52,7 +55,7 @@ class GeminiApiTest {
                                                 "You are a professional coding tutor. Provide structured coding problems."))));
 
                 GeminiResponse response = restClient.post()
-                                .uri(uri -> uri.path("/gemini-1.5-flash:generateContent")
+                                .uri(uri -> uri.path("/gemini-flash-latest:generateContent")
                                                 .queryParam("key", API_KEY).build())
                                 .contentType(MediaType.APPLICATION_JSON).body(requestBody)
                                 .retrieve().body(GeminiResponse.class);
@@ -61,8 +64,7 @@ class GeminiApiTest {
                 assertThat(response.candidates()).isNotEmpty();
 
                 String text = response.candidates().get(0).content().parts().get(0).text();
-                System.out.println("=== PARSED TEXT ===");
-                System.out.println(text);
+                log.info("=== PARSED TEXT ===\n{}", text);
 
                 assertThat(text).isNotBlank();
         }

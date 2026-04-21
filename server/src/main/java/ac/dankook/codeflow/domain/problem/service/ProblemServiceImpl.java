@@ -54,7 +54,7 @@ public class ProblemServiceImpl implements ProblemService {
                 Map.of("parts", List.of(Map.of("text", mapped.systemInstruction()))));
 
         GeminiResponse response = restClient.post()
-                .uri(uriBuilder -> uriBuilder.path("/gemini-1.5-flash:generateContent")
+                .uri(uriBuilder -> uriBuilder.path("/gemini-flash-latest:generateContent")
                         .queryParam("key", apiKey).build())
                 .contentType(MediaType.APPLICATION_JSON).body(requestBody).retrieve()
                 .body(GeminiResponse.class);
