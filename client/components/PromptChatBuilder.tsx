@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { AuthModal } from "@/components/AuthModal";
 
 // ─── 타입 ────────────────────────────────────────────────────
 
@@ -20,7 +22,7 @@ type Answers = {
   detail: string;
 };
 
-const stepOrder_CONCEPT:   StepKey[] = ["studyType", "topic", "detail"];
+const stepOrder_CONCEPT:   StepKey[] = ["studyType", "topic", "difficulty", "detail"];
 const stepOrder_ALGORITHM: StepKey[] = ["studyType", "topic", "difficulty", "detail"];
 
 const QUESTIONS: Record<StepKey, string> = {
@@ -91,36 +93,36 @@ const DIFFICULTY_TYPES_CONCEPT = [
   {
     key: "입문",
     icon: "🌱",
-    description: "출력·변수·기본 연산\n코딩을 처음 시작해요",
+    description: "개념 하나를 그대로 써요\n설명대로 따라가면 풀려요",
     badge: {
-      label: "문법 첫걸음",
+      label: "따라하기 수준",
       color: "text-emerald-400 border-emerald-400/30 bg-emerald-400/10",
     },
   },
   {
-    key: "초급",
+    key: "쉬움",
     icon: "📘",
-    description: "조건문·반복문\n흐름 제어를 익혀요",
+    description: "개념을 살짝 응용해요\n기본 구조는 그대로예요",
     badge: {
-      label: "제어문 활용",
+      label: "기본 응용",
       color: "text-blue border-blue/30 bg-blue/10",
     },
   },
   {
-    key: "중급",
+    key: "보통",
     icon: "⚡",
-    description: "배열·함수·클래스 기초\n구조를 나눠 짜``요",
+    description: "여러 조건이 합쳐져요\n흐름을 직접 설계해야 해요",
     badge: {
-      label: "구조화 프로그래밍",
+      label: "직접 설계 필요",
       color: "text-yellow-400 border-yellow-400/30 bg-yellow-400/10",
     },
   },
   {
-    key: "상급",
+    key: "어려움",
     icon: "🔥",
-    description: "재귀·예외처리·고급 OOP\n언어 깊은 곳까지 다뤄요",
+    description: "예외 케이스까지 고려해요\n깊이 생각해야 풀려요",
     badge: {
-      label: "고급 문법",
+      label: "심화 응용",
       color: "text-red-400 border-red-400/30 bg-red-400/10",
     },
   },
@@ -130,34 +132,34 @@ const DIFFICULTY_TYPES_ALGORITHM = [
   {
     key: "입문",
     icon: "🌱",
-    description: "선형 탐색·단순 반복\n알고리즘 개념을 처음 접해요",
+    description: "단순한 풀이로 해결돼요\n알고리즘 없이 접근 가능해요",
     badge: {
       label: "완전 탐색 수준",
       color: "text-emerald-400 border-emerald-400/30 bg-emerald-400/10",
     },
   },
   {
-    key: "초급",
+    key: "쉬움",
     icon: "📘",
-    description: "기본 정렬·이진 탐색\n한 가지 전략으로 풀어요",
+    description: "풀이 패턴이 명확해요\n한 가지 전략으로 풀려요",
     badge: {
-      label: "단일 전략 적용",
+      label: "패턴 파악 필요",
       color: "text-blue border-blue/30 bg-blue/10",
     },
   },
   {
-    key: "중급",
+    key: "보통",
     icon: "⚡",
-    description: "투 포인터·DP 기초·BFS/DFS\n풀이 전략 설계가 필요해요",
+    description: "전략을 직접 설계해요\n여러 케이스를 고려해야 해요",
     badge: {
-      label: "알고리즘 설계 필요",
+      label: "전략 설계 필요",
       color: "text-yellow-400 border-yellow-400/30 bg-yellow-400/10",
     },
   },
   {
-    key: "상급",
+    key: "어려움",
     icon: "🔥",
-    description: "복잡한 DP·그래프·최적화\n여러 개념을 조합해요",
+    description: "복합 접근이 필요해요\n최적화까지 고려해야 해요",
     badge: {
       label: "심화 알고리즘",
       color: "text-red-400 border-red-400/30 bg-red-400/10",
@@ -172,35 +174,20 @@ function getTopicOptions(answers: Answers): string[] | null {
 }
 
 
-function getDifficultyFromStage(stageKey: string): string {
-  const stage = LANGUAGE_STAGES.find((s) => s.key === stageKey);
-  if (!stage) return "입문";
-  if (stage.stage <= 3) return "입문";
-  if (stage.stage <= 6) return "초급";
-  if (stage.stage <= 9) return "중급";
-  return "상급";
-}
-
-function buildPrompt(answers: Answers) {
-  const detail = answers.detail.trim() || "특별한 추가 조건 없음";
-  if (answers.studyType === "언어 개념") {
-    return [
-      `다음 조건에 맞는 Java 언어 개념 학습 문제 1개를 만들어줘.`,
-      `- 언어: Java`,
-      `- 주제: ${answers.topic}`,
-      `- 난이도: ${getDifficultyFromStage(answers.topic)}`,
-      `- 해결한 문제 수: 0`,
-      `- 추가 조건: ${detail}`,
-    ].join("\n");
-  }
-  return [
-    `다음 조건에 맞는 Java 알고리즘 문제 1개를 만들어줘.`,
-    `- 언어: Java`,
-    `- 주제: ${answers.topic}`,
-    `- 난이도: ${answers.difficulty}`,
-    `- 추가 조건: ${detail}`,
-    `- 문제 설명, 입력/출력 형식, 예제 2개, 풀이 힌트, 정답 코드까지 포함해줘.`,
-  ].join("\n");
+async function generateProblem(answers: Answers): Promise<unknown> {
+  const res = await fetch("/api/v1/problems/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      language: "Java",
+      studyType: answers.studyType,
+      topic: answers.topic,
+      difficulty: answers.difficulty,
+      detail: answers.detail.trim() || "없음",
+    }),
+  });
+  if (!res.ok) throw new Error("문제 생성 실패");
+  return res.json();
 }
 
 // ─── 공통 서브 컴포넌트 ──────────────────────────────────────
@@ -427,6 +414,7 @@ function DifficultyCards({
 // ─── 메인 컴포넌트 ──────────────────────────────────────────
 
 export function PromptChatBuilder() {
+  const router = useRouter();
   const [stepIndex, setStepIndex] = useState(0);
   const [answers, setAnswers] = useState<Answers>({
     studyType: "",
@@ -479,17 +467,48 @@ export function PromptChatBuilder() {
     return result;
   }, [answers, stepIndex]);
 
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
   const isDone = stepIndex >= stepOrder.length;
   const currentKey = isDone ? null : stepOrder[stepIndex];
   const topicOptions = getTopicOptions(answers);
-  const generatedPrompt = isDone ? buildPrompt(answers) : "";
-  const studyHref = generatedPrompt
-    ? `/study?prompt=${encodeURIComponent(generatedPrompt)}&studyType=${encodeURIComponent(answers.studyType)}&topic=${encodeURIComponent(answers.topic)}`
-    : "/study";
+
+  function startGenerate() {
+    setIsGenerating(true);
+    generateProblem(answers)
+      .then((data) => {
+        sessionStorage.setItem("generatedProblem", JSON.stringify(data));
+        sessionStorage.setItem("generatedProblemMeta", JSON.stringify({
+          studyType: answers.studyType,
+          topic: answers.topic,
+          difficulty: answers.difficulty,
+          problemId: (data as { id?: number }).id ?? null,
+        }));
+        router.push("/study");
+      })
+      .catch(() => {
+        setIsGenerating(false);
+        setGenerateError("문제 생성에 실패했어요. 다시 시도해 주세요.");
+      });
+  }
+
+  useEffect(() => {
+    if (!isDone || isGenerating || generateError) return;
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      setShowAuthModal(true);
+      return;
+    }
+    startGenerate();
+  // answers가 확정된 시점(isDone)에만 실행
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDone]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping]);
+  }, [messages, isTyping, isGenerating]);
 
   function submitValue(value: string) {
     if (!currentKey) return;
@@ -531,6 +550,21 @@ export function PromptChatBuilder() {
 
   return (
     <div className="flex h-screen flex-col bg-bg text-slate-50">
+      {showAuthModal && (
+        <AuthModal
+          initialMode="login"
+          onClose={() => {
+            setShowAuthModal(false);
+            // 로그인 없이 닫으면 마지막 답변 취소 (다시 선택할 수 있도록)
+            setStepIndex((prev) => Math.max(0, prev - 1));
+            setAnswers((prev) => ({ ...prev, detail: "" }));
+          }}
+          onSuccess={() => {
+            setShowAuthModal(false);
+            startGenerate();
+          }}
+        />
+      )}
       {/* 헤더 */}
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 bg-bg/80 px-5 backdrop-blur-xl sm:px-8">
         <div className="flex items-center gap-3">
@@ -570,25 +604,40 @@ export function PromptChatBuilder() {
 
           {isTyping && <TypingIndicator />}
 
-          {/* 완성 프롬프트 */}
+          {/* 생성 중 / 오류 */}
           {isDone && !isTyping && (
             <div className="flex items-end gap-2.5">
               <AIAvatar />
               <div className="max-w-[80%] rounded-2xl rounded-bl-sm border border-blue/25 bg-blue/10 p-4">
-                <p className="mb-2 text-xs font-semibold text-blue">
-                  생성된 프롬프트
-                </p>
-                <pre className="whitespace-pre-wrap text-sm leading-6 text-slate-100">
-                  {generatedPrompt}
-                </pre>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Link
-                    href={studyHref}
-                    className="rounded-lg bg-gradient-to-r from-blue to-purple px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:opacity-90"
-                  >
-                    이 프롬프트로 문제 만들기 →
-                  </Link>
-                </div>
+                {generateError ? (
+                  <>
+                    <p className="mb-2 text-xs font-semibold text-red-400">오류</p>
+                    <p className="text-sm text-slate-300">{generateError}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGenerateError(null);
+                        setIsGenerating(false);
+                      }}
+                      className="mt-3 rounded-lg bg-gradient-to-r from-blue to-purple px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+                    >
+                      다시 시도
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="mb-2 text-xs font-semibold text-blue">AI 문제 생성 중...</p>
+                    <div className="flex items-center gap-1.5">
+                      {[0, 1, 2].map((i) => (
+                        <span
+                          key={i}
+                          className="h-1.5 w-1.5 rounded-full bg-blue animate-pulseSoft"
+                          style={{ animationDelay: `${i * 0.2}s` }}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}

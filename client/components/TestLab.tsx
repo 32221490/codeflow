@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import type * as Monaco from "monaco-editor";
 import { useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
@@ -24,7 +24,6 @@ type Snapshot = {
   note: string;
 };
 type Language = "java";
-type Template = { label: string; code: string };
 type Trace = {
   title: string;
   code: string;
@@ -47,129 +46,24 @@ type SubmissionReview = {
 };
 type Problem = {
   title: string;
-  difficulty: "입문" | "초급" | "중급" | "상급";
+  difficulty: "입문" | "쉬움" | "보통" | "어려움";
   description: string;
   inputFormat: string;
   outputFormat: string;
   examples: TestCase[];
   constraints: string[];
+  hint?: string;
+  startCode?: string;
+  expectedOutput?: string;
+  answerCode?: string;
+  problemId?: number | null;
 };
 
-// ─────────────────────────────────────────────
-// Templates
-// ─────────────────────────────────────────────
-const JAVA_TEMPLATES: Template[] = [
-  {
-    label: "선형 탐색",
-    code: `public class Main {
+const JAVA_DEFAULT_CODE = `public class Main {
   public static void main(String[] args) {
-    int[] arr = {4, 2, 7, 1, 9};
-    int target = 7;
-    int index = -1;
-    for (int i = 0; i < arr.length; i++) {
-      if (arr[i] == target) {
-        index = i;
-        break;
-      }
-    }
-    System.out.println(index);
+    // 여기에 코드를 작성하세요
   }
-}`,
-  },
-  {
-    label: "버블 정렬",
-    code: `public class Main {
-  public static void main(String[] args) {
-    int[] arr = {5, 3, 1, 4};
-    int n = arr.length;
-    for (int i = 0; i < n - 1; i++) {
-      for (int j = 0; j < n - 1 - i; j++) {
-        if (arr[j] > arr[j + 1]) {
-          int tmp = arr[j];
-          arr[j] = arr[j + 1];
-          arr[j + 1] = tmp;
-        }
-      }
-    }
-    System.out.println(arr[0] + "," + arr[1] + "," + arr[2] + "," + arr[3]);
-  }
-}`,
-  },
-  {
-    label: "팩토리얼",
-    code: `public class Main {
-  static int factorial(int n) {
-    if (n <= 1) return 1;
-    return n * factorial(n - 1);
-  }
-  public static void main(String[] args) {
-    int result = factorial(5);
-    System.out.println(result);
-  }
-}`,
-  },
-  {
-    label: "합계 계산",
-    code: `public class Main {
-  public static void main(String[] args) {
-    int a = 10;
-    int b = 20;
-    int sum = a + b;
-    String msg = "sum=" + sum;
-    System.out.println(msg);
-  }
-}`,
-  },
-  {
-    label: "배열 최댓값",
-    code: `public class Main {
-  public static void main(String[] args) {
-    int[] arr = {3, 9, 1, 7};
-    int max = arr[0];
-    for (int i = 1; i < arr.length; i++) {
-      if (arr[i] > max) max = arr[i];
-    }
-    System.out.println(max);
-  }
-}`,
-  },
-  {
-    label: "투 포인터",
-    code: `public class Main {
-  public static void main(String[] args) {
-    int[] arr = {1, 2, 4, 7, 11};
-    int left = 0, right = arr.length - 1;
-    int target = 9;
-    while (left < right) {
-      int sum = arr[left] + arr[right];
-      if (sum == target) break;
-      if (sum < target) left++;
-      else right--;
-    }
-    System.out.println(left + "," + right);
-  }
-}`,
-  },
-  {
-    label: "피보나치",
-    code: `public class Main {
-  public static void main(String[] args) {
-    int n = 7;
-    int a = 0, b = 1;
-    for (int i = 2; i <= n; i++) {
-      int tmp = a + b;
-      a = b;
-      b = tmp;
-    }
-    System.out.println(b);
-  }
-}`,
-  },
-];
-
-const TEMPLATES_BY_LANGUAGE: Record<Language, Template[]> = {
-  java: JAVA_TEMPLATES,
-};
+}`;
 
 const SUPPORTED_SYNTAX_BY_LANGUAGE: Record<Language, string[]> = {
   java: [
@@ -188,7 +82,7 @@ const SUPPORTED_SYNTAX_BY_LANGUAGE: Record<Language, string[]> = {
 // ─────────────────────────────────────────────
 const DUMMY_PROBLEM_ALGORITHM: Problem = {
   title: "배열의 최댓값",
-  difficulty: "초급",
+  difficulty: "쉬움",
   description:
     "N개의 정수로 이루어진 배열이 주어진다. 배열에서 가장 큰 수를 찾아 출력하시오.",
   inputFormat:
@@ -203,7 +97,7 @@ const DUMMY_PROBLEM_ALGORITHM: Problem = {
 };
 
 const CONCEPT_PROBLEMS: Record<string, Problem> = {
-  "출력": {
+  출력: {
     title: "Hello, Java!",
     difficulty: "입문",
     description: "화면에 Hello, Java!를 출력하는 프로그램을 작성하시오.",
@@ -215,7 +109,8 @@ const CONCEPT_PROBLEMS: Record<string, Problem> = {
   "변수·자료형": {
     title: "나이와 이름 출력",
     difficulty: "입문",
-    description: "int형 변수 age에 20을, String형 변수 name에 \"Java\"를 저장하고 \"이름: Java, 나이: 20\" 형식으로 출력하시오.",
+    description:
+      'int형 변수 age에 20을, String형 변수 name에 "Java"를 저장하고 "이름: Java, 나이: 20" 형식으로 출력하시오.',
     inputFormat: "없음",
     outputFormat: "이름: Java, 나이: 20",
     examples: [{ input: "", expected: "이름: Java, 나이: 20" }],
@@ -224,15 +119,16 @@ const CONCEPT_PROBLEMS: Record<string, Problem> = {
   "산술·연산자": {
     title: "사칙연산 결과 출력",
     difficulty: "입문",
-    description: "두 정수 a=17, b=5를 선언하고 a+b, a-b, a*b, a/b, a%b를 각각 한 줄씩 출력하시오.",
+    description:
+      "두 정수 a=17, b=5를 선언하고 a+b, a-b, a*b, a/b, a%b를 각각 한 줄씩 출력하시오.",
     inputFormat: "없음",
     outputFormat: "22\n12\n85\n3\n2",
     examples: [{ input: "", expected: "22\n12\n85\n3\n2" }],
     constraints: [],
   },
-  "입력": {
+  입력: {
     title: "정수 입력 후 출력",
-    difficulty: "초급",
+    difficulty: "쉬움",
     description: "정수 하나를 입력받아 그대로 출력하시오.",
     inputFormat: "정수 N",
     outputFormat: "입력받은 정수 N",
@@ -242,10 +138,11 @@ const CONCEPT_PROBLEMS: Record<string, Problem> = {
     ],
     constraints: ["−1,000,000 ≤ N ≤ 1,000,000"],
   },
-  "조건문": {
+  조건문: {
     title: "양수·음수·영 판별",
-    difficulty: "초급",
-    description: "정수 하나를 입력받아 양수면 positive, 음수면 negative, 0이면 zero를 출력하시오.",
+    difficulty: "쉬움",
+    description:
+      "정수 하나를 입력받아 양수면 positive, 음수면 negative, 0이면 zero를 출력하시오.",
     inputFormat: "정수 N",
     outputFormat: "positive / negative / zero 중 하나",
     examples: [
@@ -255,9 +152,9 @@ const CONCEPT_PROBLEMS: Record<string, Problem> = {
     ],
     constraints: ["−1,000 ≤ N ≤ 1,000"],
   },
-  "반복문": {
+  반복문: {
     title: "1부터 N까지 합",
-    difficulty: "초급",
+    difficulty: "쉬움",
     description: "정수 N을 입력받아 1부터 N까지의 합을 출력하시오.",
     inputFormat: "정수 N",
     outputFormat: "1부터 N까지의 합",
@@ -267,9 +164,9 @@ const CONCEPT_PROBLEMS: Record<string, Problem> = {
     ],
     constraints: ["1 ≤ N ≤ 1,000"],
   },
-  "배열": {
+  배열: {
     title: "배열 역순 출력",
-    difficulty: "중급",
+    difficulty: "보통",
     description: "N개의 정수를 입력받아 역순으로 공백으로 구분하여 출력하시오.",
     inputFormat: "첫째 줄에 N, 둘째 줄에 N개의 정수",
     outputFormat: "역순으로 정렬된 정수들",
@@ -279,10 +176,11 @@ const CONCEPT_PROBLEMS: Record<string, Problem> = {
     ],
     constraints: ["1 ≤ N ≤ 100"],
   },
-  "함수": {
+  함수: {
     title: "두 수 중 최댓값",
-    difficulty: "중급",
-    description: "두 정수를 입력받아 더 큰 수를 반환하는 메서드 max(int a, int b)를 작성하고 결과를 출력하시오.",
+    difficulty: "보통",
+    description:
+      "두 정수를 입력받아 더 큰 수를 반환하는 메서드 max(int a, int b)를 작성하고 결과를 출력하시오.",
     inputFormat: "공백으로 구분된 두 정수 a, b",
     outputFormat: "두 수 중 더 큰 값",
     examples: [
@@ -291,10 +189,11 @@ const CONCEPT_PROBLEMS: Record<string, Problem> = {
     ],
     constraints: ["−1,000 ≤ a, b ≤ 1,000"],
   },
-  "문자열": {
+  문자열: {
     title: "문자열 정보 출력",
-    difficulty: "중급",
-    description: "문자열을 입력받아 첫 줄에 길이, 둘째 줄에 대문자로 변환한 결과를 출력하시오.",
+    difficulty: "보통",
+    description:
+      "문자열을 입력받아 첫 줄에 길이, 둘째 줄에 대문자로 변환한 결과를 출력하시오.",
     inputFormat: "문자열 s (공백 없음)",
     outputFormat: "길이\n대문자 변환 결과",
     examples: [
@@ -303,9 +202,9 @@ const CONCEPT_PROBLEMS: Record<string, Problem> = {
     ],
     constraints: ["1 ≤ s의 길이 ≤ 100"],
   },
-  "재귀": {
+  재귀: {
     title: "팩토리얼",
-    difficulty: "상급",
+    difficulty: "어려움",
     description: "재귀 함수를 이용해 N 팩토리얼(N!)을 구하여 출력하시오.",
     inputFormat: "정수 N",
     outputFormat: "N!",
@@ -317,8 +216,9 @@ const CONCEPT_PROBLEMS: Record<string, Problem> = {
   },
   "컬렉션 기초": {
     title: "ArrayList 합계",
-    difficulty: "상급",
-    description: "N개의 정수를 ArrayList에 저장하고 모든 원소의 합을 출력하시오.",
+    difficulty: "어려움",
+    description:
+      "N개의 정수를 ArrayList에 저장하고 모든 원소의 합을 출력하시오.",
     inputFormat: "첫째 줄에 N, 둘째 줄에 N개의 정수",
     outputFormat: "합계",
     examples: [
@@ -329,12 +229,6 @@ const CONCEPT_PROBLEMS: Record<string, Problem> = {
   },
 };
 
-const DUMMY_TEST_RESULTS: TestResult[] = [
-  { input: "4\n3 9 1 7", expected: "9", actual: "9", passed: true },
-  { input: "5\n-1 -5 -3 -2 -4", expected: "-1", actual: "-1", passed: true },
-  { input: "3\n42 42 42", expected: "42", actual: "0", passed: false },
-];
-
 const LEFT_PANEL_MIN_WIDTH = 280;
 const RIGHT_PANEL_MIN_WIDTH = 300;
 const EDITOR_PANEL_MIN_WIDTH = 520;
@@ -342,88 +236,23 @@ const RESIZER_WIDTH = 10;
 const OUTPUT_PANEL_MIN_HEIGHT = 96;
 const OUTPUT_PANEL_MAX_HEIGHT = 360;
 
-const DEFAULT_TEMPLATE_LABEL = "배열 최댓값";
-
-const QUICK_PROMPTS = [
-  "어떻게 시작해요?",
-  "for문 사용법",
-  "조건문 힌트",
-  "시간복잡도?",
-] as const;
-
-const QUICK_RESPONSES: Record<(typeof QUICK_PROMPTS)[number], string> = {
-  "어떻게 시작해요?":
-    "첫 번째 원소를 최댓값이라고 가정하고 시작해보세요. 이미 `max = arr[0]`가 있다면, 두 번째 원소부터 하나씩 비교하면 됩니다.",
-  "for문 사용법":
-    "`i = 1`부터 시작하는 이유는 `arr[0]`을 이미 max에 넣었기 때문이에요. 반복문 안에서 `arr[i]`와 `max`를 비교해보세요.",
-  "조건문 힌트":
-    "현재 원소가 지금까지의 최댓값보다 크면 `max`를 바꾸면 됩니다. 즉 `if (arr[i] > max)` 형태를 떠올리면 좋아요.",
-  "시간복잡도?":
-    "배열을 한 번만 순회하므로 시간복잡도는 O(n)입니다. 이 문제에서는 가장 자연스럽고 효율적인 방식이에요.",
-};
-
-function evaluateSubmission(
-  code: string,
-  language: Language,
-): SubmissionReview {
-  const normalized = code.replace(/\s+/g, "");
-  const passed =
-    language === "java"
-      ? normalized.includes("if(arr[i]>max)") ||
-        normalized.includes("if(arr[i]>max){max=arr[i];}") ||
-        normalized.includes("max=arr[i]")
-      : normalized.includes("ifarr[i]>max_val:") ||
-        normalized.includes("ifarr[i]>max_val:max_val=arr[i]") ||
-        normalized.includes("max_val=arr[i]");
-
-  return passed
-    ? {
-        passed: true,
-        title: "정답이에요",
-        feedback:
-          "최댓값을 직접 갱신하는 흐름이 정확합니다. 다음 문제로 넘어가서 같은 패턴을 다른 조건에 적용해볼 수 있어요.",
-        nextHint:
-          "다음에는 조건문과 반복문이 함께 들어가는 문제를 한 번 더 풀어보면 좋아요.",
-      }
-    : {
-        passed: false,
-        title: "아직 한 단계만 더",
-        feedback:
-          "현재 코드는 배열을 훑고 있지만, `현재 값이 더 크면 max를 갱신한다`는 핵심 조건이 빠져 있어요. `for`문 안에서 비교와 대입이 함께 들어가는지 확인해보세요.",
-        nextHint:
-          "첫 번째 원소를 기준값으로 두고, `arr[i] > max`일 때만 `max = arr[i]`로 바꾸는 흐름을 떠올려보세요.",
-      };
-}
-
-function getDefaultTemplateIndex(language: Language) {
-  const index = TEMPLATES_BY_LANGUAGE[language].findIndex(
-    (template) => template.label === DEFAULT_TEMPLATE_LABEL,
-  );
-  return index === -1 ? 0 : index;
-}
+const QUICK_PROMPTS = ["어떻게 시작해요?"] as const;
 
 function createInitialChatMessages(): ChatMessage[] {
   return [
     {
       role: "ai",
       content:
-        "배열 최댓값 찾기 문제예요. 막히는 부분이 있으면 바로 물어보세요. 정답을 그대로 주기보다는 다음 한 줄을 스스로 완성할 수 있게 힌트 중심으로 도와드릴게요.",
+        '안녕하세요! AI 튜터예요. 문제를 풀다가 막히면 언제든 질문하세요.\n\n💡 이런 것들을 물어볼 수 있어요.\n- "어떻게 시작해요?" — 접근 방향\n- "for문 어떻게 써요?" — 문법 질문\n- "내 코드 어디가 틀렸어요?" — 코드 리뷰\n- "정답 알려줘" — 전체 코드 공개\n\n정답은 요청할 때만 드리고, 평소엔 다음 한 줄을 스스로 완성할 수 있도록 힌트로 도와드릴게요.',
     },
   ];
 }
 
-function getDefaultCode(language: Language) {
-  return (
-    TEMPLATES_BY_LANGUAGE[language][getDefaultTemplateIndex(language)]?.code ??
-    TEMPLATES_BY_LANGUAGE[language][0].code
-  );
-}
-
 const DIFFICULTY_COLOR: Record<Problem["difficulty"], string> = {
   입문: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400",
-  초급: "border-blue/40 bg-blue/10 text-blue",
-  중급: "border-yellow-500/40 bg-yellow-500/10 text-yellow-400",
-  상급: "border-red-500/40 bg-red-500/10 text-red-400",
+  쉬움: "border-blue/40 bg-blue/10 text-blue",
+  보통: "border-yellow-500/40 bg-yellow-500/10 text-yellow-400",
+  어려움: "border-red-500/40 bg-red-500/10 text-red-400",
 };
 
 // ─────────────────────────────────────────────
@@ -1400,29 +1229,30 @@ function VsCodeWindow({
 // ─────────────────────────────────────────────
 // Main component
 // ─────────────────────────────────────────────
-export function TestLab() {
+export function TestLab({
+  problem: problemProp,
+  isAlgorithm = false,
+}: {
+  problem?: Problem;
+  isAlgorithm?: boolean;
+}) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const studyType = searchParams.get("studyType") ?? "";
-  const topic = searchParams.get("topic") ?? "";
-  const isAlgorithm = studyType === "알고리즘";
-  const DUMMY_PROBLEM = isAlgorithm
-    ? DUMMY_PROBLEM_ALGORITHM
-    : (CONCEPT_PROBLEMS[topic] ?? CONCEPT_PROBLEMS["출력"]);
+  const DUMMY_PROBLEM =
+    problemProp ??
+    (isAlgorithm ? DUMMY_PROBLEM_ALGORITHM : DUMMY_PROBLEM_ALGORITHM);
 
-  const templates = TEMPLATES_BY_LANGUAGE["java"];
   const [phase, setPhase] = useState<"editor" | "loading" | "result">("editor");
-  const [editorCode, setEditorCode] = useState(getDefaultCode("java"));
-  const [trace, setTrace] = useState<Trace | null>(null);
-  const [activeTemplate, setActiveTemplate] = useState(
-    getDefaultTemplateIndex("java"),
+  const [editorCode, setEditorCode] = useState(
+    () => problemProp?.startCode ?? JAVA_DEFAULT_CODE,
   );
+  const [trace, setTrace] = useState<Trace | null>(null);
 
   const [testResults, setTestResults] = useState<TestResult[] | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(
     createInitialChatMessages,
   );
   const [chatInput, setChatInput] = useState("");
+  const [isTutorLoading, setIsTutorLoading] = useState(false);
   const [editorStatus, setEditorStatus] = useState<
     "idle" | "running" | "success" | "error"
   >("idle");
@@ -1434,6 +1264,7 @@ export function TestLab() {
   const [outputPanelHeight, setOutputPanelHeight] = useState(140);
   const [submissionReview, setSubmissionReview] =
     useState<SubmissionReview | null>(null);
+  const [showExitModal, setShowExitModal] = useState(false);
 
   // Visualizer state
   const [snapshotIndex, setSnapshotIndex] = useState(0);
@@ -1453,6 +1284,18 @@ export function TestLab() {
 
   const maxIndex = (trace?.snapshots.length ?? 1) - 1;
 
+  // 채점 결과 페이지에서 브라우저 뒤로가기 차단
+  useEffect(() => {
+    if (phase !== "result") return;
+    window.history.pushState(null, "", window.location.href);
+    const onPopState = () => {
+      window.history.pushState(null, "", window.location.href);
+      setShowExitModal(true);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [phase]);
+
   const lineCount = editorCode.split("\n").length;
   const MONACO_LINE_HEIGHT = 20;
   const languageLabel = "Java";
@@ -1460,27 +1303,6 @@ export function TestLab() {
   const studyLayoutStyle = {
     ["--study-layout" as any]: `${leftPanelWidth}px ${RESIZER_WIDTH}px minmax(0, 1fr) ${RESIZER_WIDTH}px ${rightPanelWidth}px`,
   } as CSSProperties;
-
-  // loading → result transition
-  useEffect(() => {
-    if (phase !== "loading") return;
-    const id = window.setTimeout(() => {
-      const review = evaluateSubmission(editorCode, "java");
-      setSubmissionReview(review);
-      setTestResults(
-        review.passed
-          ? DUMMY_TEST_RESULTS
-          : DUMMY_TEST_RESULTS.map((result, index) =>
-              index === 1 ? { ...result, actual: "0", passed: false } : result,
-            ),
-      );
-      setTrace(null);
-      setSnapshotIndex(0);
-      setIsRunning(false);
-      setPhase("result");
-    }, 1500);
-    return () => window.clearTimeout(id);
-  }, [phase, editorCode, isAlgorithm]);
 
   useEffect(() => {
     if (!isRunning || !trace) return;
@@ -1623,9 +1445,55 @@ export function TestLab() {
     window.addEventListener("pointerup", stopResize);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setSubmissionReview(null);
     setPhase("loading");
+    try {
+      const res = await fetch("/api/v1/problems/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          problemId: DUMMY_PROBLEM.problemId,
+          sourceCode: editorCode,
+        }),
+      });
+      const json = await res.json();
+      const result = json?.data;
+      const passed: boolean = result?.passed ?? false;
+      const output: string = result?.programOutput ?? "";
+      const expected: string = result?.expectedOutput ?? "";
+
+      setTestResults([
+        {
+          input: DUMMY_PROBLEM.examples[0]?.input ?? "",
+          expected,
+          actual: output,
+          passed,
+        },
+      ]);
+      setSubmissionReview(
+        passed
+          ? {
+              passed: true,
+              title: "정답이에요",
+              feedback:
+                "코드가 예상 출력과 일치합니다. 시각화로 실행 흐름을 확인해보세요.",
+              nextHint: "",
+            }
+          : {
+              passed: false,
+              title: "아직 한 단계만 더",
+              feedback: `예상 출력: "${expected}" / 실제 출력: "${output}"`,
+              nextHint: "출력 형식을 다시 확인해보세요.",
+            },
+      );
+      if (passed) {
+        setTrace(generateTrace(editorCode, "java"));
+      }
+      setPhase("result");
+    } catch {
+      setPhase("editor");
+    }
   };
 
   const handleEditCode = () => {
@@ -1635,10 +1503,7 @@ export function TestLab() {
   };
 
   const handleNextProblem = () => {
-    const nextIndex = (activeTemplate + 1) % templates.length;
-    const nextTemplate = templates[nextIndex];
-    setActiveTemplate(nextIndex);
-    setEditorCode(nextTemplate.code);
+    setEditorCode(DUMMY_PROBLEM.startCode ?? JAVA_DEFAULT_CODE);
     setTrace(null);
     setPhase("editor");
     setIsRunning(false);
@@ -1650,6 +1515,11 @@ export function TestLab() {
   };
 
   const handleGoHome = () => {
+    setShowExitModal(true);
+  };
+
+  const handleConfirmExit = () => {
+    setShowExitModal(false);
     router.push("/");
   };
 
@@ -1657,53 +1527,64 @@ export function TestLab() {
     setChatMessages((current) => [...current, { role, content }]);
   };
 
-  const handleSendMessage = (message?: string) => {
+  const handleSendMessage = async (message?: string) => {
     const nextMessage = (message ?? chatInput).trim();
     if (!nextMessage) return;
 
     addChatMessage("user", nextMessage);
     setChatInput("");
+    setIsTutorLoading(true);
 
-    const quickResponse =
-      QUICK_RESPONSES[nextMessage as keyof typeof QUICK_RESPONSES];
-    const fallback =
-      "for문 안에서 현재 값과 `max`를 비교하는 한 줄이 핵심이에요. `arr[i]`가 더 크면 어떤 값이 갱신되어야 하는지 떠올려보세요.";
-
-    window.setTimeout(() => {
-      addChatMessage("ai", quickResponse ?? fallback);
-    }, 350);
+    try {
+      const res = await fetch("/api/v1/problems/hint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: DUMMY_PROBLEM.title,
+          difficulty: DUMMY_PROBLEM.difficulty,
+          problem: DUMMY_PROBLEM.description,
+          userCode: editorCode,
+          question: nextMessage,
+        }),
+      });
+      const text = await res.text();
+      addChatMessage(
+        "ai",
+        text || "힌트를 가져오지 못했어요. 다시 시도해보세요.",
+      );
+    } catch {
+      addChatMessage(
+        "ai",
+        "AI 튜터 연결에 실패했어요. 잠시 후 다시 시도해보세요.",
+      );
+    } finally {
+      setIsTutorLoading(false);
+    }
   };
 
-  const handleRunPreview = () => {
+  const handleRunPreview = async () => {
     setEditorStatus("running");
     setEditorOutput("실행 중...");
 
-    window.setTimeout(() => {
-      const normalized = editorCode.replace(/\s+/g, "");
-      const isSolved =
-        "java" === "java"
-          ? normalized.includes("if(arr[i]>max)") ||
-            normalized.includes("if(arr[i]>max){max=arr[i];}") ||
-            normalized.includes("max=arr[i]")
-          : normalized.includes("ifarr[i]>max_val:") ||
-            normalized.includes("ifarr[i]>max_val:max_val=arr[i]") ||
-            normalized.includes("max_val=arr[i]");
-
-      if (isSolved) {
-        setEditorStatus("success");
-        setEditorOutput("9");
-        addChatMessage(
-          "ai",
-          "좋아요. 실행 결과가 `9`로 나왔어요. 이제 제출해서 테스트 케이스 기준으로도 확인해볼 수 있습니다.",
-        );
+    try {
+      const res = await fetch("/api/dockertracker/trace", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceCode: editorCode }),
+      });
+      const json = await res.json();
+      const output: string = json?.data?.answerCheck?.programOutput ?? "";
+      if (!res.ok || json?.success === false) {
+        setEditorStatus("error");
+        setEditorOutput(output || "컴파일 오류가 발생했어요.");
         return;
       }
-
+      setEditorStatus("success");
+      setEditorOutput(output || "(출력 없음)");
+    } catch {
       setEditorStatus("error");
-      setEditorOutput(
-        "출력 없음 또는 오류: 반복문 안에 최댓값 갱신 조건이 있는지 확인해보세요.",
-      );
-    }, 900);
+      setEditorOutput("실행 서버에 연결할 수 없어요.");
+    }
   };
 
   // ── LOADING PHASE ────────────────────────────
@@ -1794,19 +1675,9 @@ export function TestLab() {
                     >
                       {DUMMY_PROBLEM.difficulty}
                     </span>
-                    <span className="rounded-full border border-blue/35 bg-blue/10 px-2.5 py-1 text-[11px] text-blue">
-                      배열
-                    </span>
-                    <span className="rounded-full border border-blue/35 bg-blue/10 px-2.5 py-1 text-[11px] text-blue">
-                      반복문
-                    </span>
                   </div>
                   <p className="mt-4 text-sm leading-7 text-slate-300">
                     {DUMMY_PROBLEM.description}
-                    <br />
-                    <br />
-                    내장 정렬이나 최대값 함수를 쓰지 않고, 반복문으로 직접
-                    구현해보세요.
                   </p>
                 </div>
 
@@ -1840,9 +1711,6 @@ export function TestLab() {
                         {constraint}
                       </li>
                     ))}
-                    <li className="list-disc">
-                      내장 정렬 / max 함수 사용 금지
-                    </li>
                   </ul>
                 </section>
 
@@ -1851,8 +1719,8 @@ export function TestLab() {
                     힌트
                   </p>
                   <div className="rounded-xl border-l-4 border-yellow-400 bg-[#1f2937] px-4 py-3 text-sm leading-6 text-slate-300">
-                    첫 번째 원소를 기준값으로 두고 시작한 뒤, 더 큰 값을 만날
-                    때마다 최댓값을 갱신해보세요.
+                    {DUMMY_PROBLEM.hint ??
+                      "문제를 풀다가 막히면 AI 튜터에게 질문해보세요."}
                   </div>
                 </section>
 
@@ -1908,9 +1776,9 @@ export function TestLab() {
                   </button>
                   <button
                     onClick={() => {
-                      const nextCode = getDefaultCode("java");
-                      setEditorCode(nextCode);
-                      setActiveTemplate(getDefaultTemplateIndex("java"));
+                      setEditorCode(
+                        DUMMY_PROBLEM.startCode ?? JAVA_DEFAULT_CODE,
+                      );
                       setEditorStatus("idle");
                       setEditorOutput(
                         "실행 버튼을 누르면 결과가 여기에 표시됩니다.",
@@ -1920,28 +1788,6 @@ export function TestLab() {
                   >
                     ↺ 초기화
                   </button>
-                </div>
-              </div>
-
-              <div className="border-b border-white/10 px-4 py-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  {templates.map((template, index) => (
-                    <button
-                      key={template.label}
-                      onClick={() => {
-                        setActiveTemplate(index);
-                        setEditorCode(template.code);
-                        setTestResults(null);
-                        setEditorStatus("idle");
-                        setEditorOutput(
-                          "실행 버튼을 누르면 결과가 여기에 표시됩니다.",
-                        );
-                      }}
-                      className={`rounded-full border px-3 py-1 text-[11px] transition ${activeTemplate === index ? "border-blue/40 bg-blue/10 text-blue" : "border-white/10 text-slate-500 hover:border-white/20 hover:text-slate-300"}`}
-                    >
-                      {template.label}
-                    </button>
-                  ))}
                 </div>
               </div>
 
@@ -2383,12 +2229,24 @@ export function TestLab() {
                         {message.role === "ai" ? "AI" : "나"}
                       </div>
                       <div
-                        className={`max-w-[88%] rounded-2xl px-3 py-2 text-sm leading-6 ${message.role === "ai" ? "rounded-bl-md bg-[#1f2937] text-slate-100" : "rounded-br-md border border-blue/20 bg-blue/10 text-slate-100"}`}
+                        className={`max-w-[88%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm leading-6 ${message.role === "ai" ? "rounded-bl-md bg-[#1f2937] text-slate-100" : "rounded-br-md border border-blue/20 bg-blue/10 text-slate-100"}`}
                       >
                         {message.content}
                       </div>
                     </div>
                   ))}
+                  {isTutorLoading && (
+                    <div className="flex gap-2">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue/20 text-[11px] font-bold text-blue">
+                        AI
+                      </div>
+                      <div className="flex items-center gap-1 rounded-2xl rounded-bl-md bg-[#1f2937] px-4 py-3">
+                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:0ms]" />
+                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:150ms]" />
+                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:300ms]" />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="px-4 pb-3">
@@ -2410,6 +2268,7 @@ export function TestLab() {
                     <textarea
                       rows={1}
                       value={chatInput}
+                      disabled={isTutorLoading}
                       onChange={(event) => setChatInput(event.target.value)}
                       onKeyDown={(event) => {
                         if (event.key === "Enter" && !event.shiftKey) {
@@ -2417,12 +2276,17 @@ export function TestLab() {
                           handleSendMessage();
                         }
                       }}
-                      placeholder="코드 작성 중 막히면 물어보세요..."
-                      className="min-h-[42px] flex-1 resize-none rounded-xl border border-white/15 bg-[#1f2937] px-3 py-2 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-blue/40"
+                      placeholder={
+                        isTutorLoading
+                          ? "AI가 생각 중이에요..."
+                          : "코드 작성 중 막히면 물어보세요..."
+                      }
+                      className="min-h-[42px] flex-1 resize-none rounded-xl border border-white/15 bg-[#1f2937] px-3 py-2 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-blue/40 disabled:opacity-50"
                     />
                     <button
                       onClick={() => handleSendMessage()}
-                      className="flex h-[42px] w-[42px] items-center justify-center rounded-xl bg-blue text-sm font-semibold text-white transition hover:opacity-90"
+                      disabled={isTutorLoading}
+                      className="flex h-[42px] w-[42px] items-center justify-center rounded-xl bg-blue text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
                     >
                       ↑
                     </button>
@@ -2450,7 +2314,12 @@ export function TestLab() {
     ? testResults.filter((r) => r.passed).length
     : 0;
   const totalCount = testResults ? testResults.length : 0;
-  const review = submissionReview ?? evaluateSubmission(editorCode, "java");
+  const review = submissionReview ?? {
+    passed: false,
+    title: "결과 없음",
+    feedback: "",
+    nextHint: "",
+  };
 
   if (phase !== "result") return null;
 
@@ -2470,6 +2339,32 @@ export function TestLab() {
 
   return (
     <main className="min-h-screen bg-bg text-slate-50">
+      {showExitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#111827] p-6 shadow-2xl">
+            <h3 className="mb-2 text-base font-semibold text-white">
+              메인으로 나가시겠어요?
+            </h3>
+            <p className="mb-6 text-sm text-slate-400">
+              지금 나가면 현재 채점 결과가 사라집니다.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowExitModal(false)}
+                className="rounded-lg border border-white/15 px-4 py-2 text-sm text-slate-300 transition hover:border-white/30 hover:text-white"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleConfirmExit}
+                className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600"
+              >
+                나가기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <header className="sticky top-0 z-30 border-b border-white/10 bg-bg/85 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-8">
           <button
