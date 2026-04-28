@@ -34,9 +34,13 @@ public class GeminiService {
 
 
     // 문제 생성 부분
-    public ProblemResponseDto generateProblem(String topic, String difficulty) {
+    public ProblemResponseDto generateProblem(String studyType, String topic, String difficulty,
+            String detail) {
         String prompt = promptFiller.fill(PromptTemplate.PROBLEM_GENERATE,
-                Map.of("topic", defaultString(topic), "difficulty", defaultString(difficulty)));
+                Map.of("studyType", defaultString(studyType), "topic", defaultString(topic),
+                        "difficulty", defaultString(difficulty), "difficultyDescription",
+                        getDifficultyDescription(difficulty), "detail",
+                        defaultString(detail).isBlank() ? "없음" : defaultString(detail)));
         String response = callGemini(prompt);
 
         try {
@@ -47,6 +51,17 @@ public class GeminiService {
     }
 
 
+
+    // AI 튜터 부분
+    public String askTutor(String topic, String difficulty, String problem, String userCode,
+            String question) {
+        String prompt = promptFiller.fill(PromptTemplate.AI_TUTOR, Map.of("topic",
+                defaultString(topic), "difficulty", defaultString(difficulty), "problem",
+                defaultString(problem), "userCode",
+                defaultString(userCode).isBlank() ? "아직 코드를 작성하지 않았습니다." : defaultString(userCode),
+                "question", defaultString(question)));
+        return callGemini(prompt);
+    }
 
     // 제미나이 호출 부분
     private String callGemini(String prompt) {
@@ -84,6 +99,18 @@ public class GeminiService {
         }
 
         return trimmed;
+    }
+
+    private String getDifficultyDescription(String difficulty) {
+        if (difficulty == null)
+            return "";
+        return switch (difficulty) {
+            case "입문" -> "개념 하나를 그대로 사용하는 수준. 설명대로 따라 작성하면 풀리는 문제";
+            case "쉬움" -> "기본 개념을 살짝 응용하는 수준. 주어진 구조 안에서 조건 한두 개 추가";
+            case "보통" -> "여러 조건이 합쳐진 수준. 학생이 흐름을 직접 설계해야 하는 문제";
+            case "어려움" -> "예외 케이스까지 고려해야 하는 수준. 깊은 이해와 응용이 필요한 문제";
+            default -> "";
+        };
     }
 
     private String defaultString(String value) {

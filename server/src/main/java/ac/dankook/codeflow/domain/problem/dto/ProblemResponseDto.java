@@ -1,10 +1,8 @@
 package ac.dankook.codeflow.domain.problem.dto;
 
-public record ProblemResponseDto(
-        String title,
-        String description,
-        String inputExample,
-        String outputExample,
-        String hint,
-        String answer) {
+import java.util.List;
+
+public record ProblemResponseDto(String title, String description, String inputExample,
+                String outputExample, List<String> constraints, String hint, String startCode,
+                String answerCode, String expectedOutput) {
 }
