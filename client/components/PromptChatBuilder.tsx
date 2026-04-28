@@ -11,52 +11,25 @@ type Message = {
   text: string;
 };
 
-type StepKey = "language" | "studyType" | "topic" | "difficulty" | "detail";
+type StepKey = "studyType" | "topic" | "difficulty" | "detail";
 
 type Answers = {
-  language: string; // "Java" | "Python"
   studyType: string; // "언어 개념" | "알고리즘"
   topic: string; // 개념명 또는 분야명
   difficulty: string;
   detail: string;
 };
 
-const STEP_ORDER: StepKey[] = [
-  "language",
-  "studyType",
-  "topic",
-  "difficulty",
-  "detail",
-];
+const stepOrder_CONCEPT:   StepKey[] = ["studyType", "topic", "detail"];
+const stepOrder_ALGORITHM: StepKey[] = ["studyType", "topic", "difficulty", "detail"];
 
 const QUESTIONS: Record<StepKey, string> = {
-  language: "어떤 언어로 학습할까요?",
   studyType: "어떤 유형의 학습을 원하시나요?",
   topic: "어떤 주제를 다뤄볼까요?",
   difficulty: "난이도는 어느 정도로 할까요?",
   detail:
     "추가 조건이 있으면 자유롭게 적어주세요.\n예) 스토리형 문제, 특정 메서드 사용 등",
 };
-
-// 언어 카드 데이터
-const LANGUAGE_TYPES = [
-  {
-    key: "Java",
-    description: "정적 타입 언어로\n객체지향을 탄탄하게 익혀요",
-    badge: {
-      label: "실행 과정 시각화 지원",
-      color: "text-emerald-400 border-emerald-400/30 bg-emerald-400/10",
-    },
-  },
-  {
-    key: "Python",
-    description: "간결한 문법으로\n빠르게 개념을 실험해요",
-    badge: {
-      label: "실행 과정 시각화 지원",
-      color: "text-emerald-400 border-emerald-400/30 bg-emerald-400/10",
-    },
-  },
-] as const;
 
 // studyType 카드 데이터
 const STUDY_TYPES = [
@@ -80,27 +53,28 @@ const STUDY_TYPES = [
   },
 ] as const;
 
-// 언어별 개념 목록
-const CONCEPTS: Record<string, string[]> = {
-  Java: [
-    "변수/타입",
-    "조건문",
-    "반복문",
-    "배열/ArrayList",
-    "클래스/객체",
-    "재귀",
-    "예외처리",
-  ],
-  Python: [
-    "변수/타입",
-    "조건문",
-    "반복문",
-    "리스트/튜플",
-    "클래스/객체",
-    "재귀",
-    "예외처리",
-  ],
-};
+const LANGUAGE_STAGES = [
+  { stage: 1,  key: "출력",         desc: "System.out.println" },
+  { stage: 2,  key: "변수·자료형",  desc: "int, String, boolean" },
+  { stage: 3,  key: "산술·연산자",  desc: "+, -, *, /, % 형변환" },
+  { stage: 4,  key: "입력",         desc: "Scanner 사용법" },
+  { stage: 5,  key: "조건문",       desc: "if / else if / switch" },
+  { stage: 6,  key: "반복문",       desc: "for / while / break" },
+  { stage: 7,  key: "배열",         desc: "1차원·2차원 배열" },
+  { stage: 8,  key: "함수",         desc: "메서드·매개변수·return" },
+  { stage: 9,  key: "문자열",       desc: "String 메서드" },
+  { stage: 10, key: "재귀",         desc: "팩토리얼·피보나치·콜스택" },
+  { stage: 11, key: "컬렉션 기초",  desc: "ArrayList·HashMap" },
+];
+
+const OOP_STAGES = [
+  { stage: 12, key: "클래스·객체",        desc: "class, new, 인스턴스" },
+  { stage: 13, key: "생성자·접근제어자",  desc: "public, private, this" },
+  { stage: 14, key: "상속",               desc: "extends, super, override" },
+  { stage: 15, key: "인터페이스·추상클래스", desc: "interface, abstract" },
+  { stage: 16, key: "예외처리",           desc: "try-catch, throws" },
+  { stage: 17, key: "제네릭·컬렉션 심화", desc: "List<T>, Map<K,V>" },
+];
 
 // 알고리즘 분야 (언어 무관)
 const ALGORITHM_DOMAINS = [
@@ -135,7 +109,7 @@ const DIFFICULTY_TYPES_CONCEPT = [
   {
     key: "중급",
     icon: "⚡",
-    description: "배열·함수·클래스 기초\n구조를 나눠 짜요",
+    description: "배열·함수·클래스 기초\n구조를 나눠 짜``요",
     badge: {
       label: "구조화 프로그래밍",
       color: "text-yellow-400 border-yellow-400/30 bg-yellow-400/10",
@@ -191,27 +165,41 @@ const DIFFICULTY_TYPES_ALGORITHM = [
   },
 ] as const;
 
-function getTopicOptions(answers: Answers): string[] {
-  if (answers.studyType === "언어 개념")
-    return CONCEPTS[answers.language] ?? [];
+function getTopicOptions(answers: Answers): string[] | null {
+  if (answers.studyType === "언어 개념") return null; // StageList로 별도 처리
   if (answers.studyType === "알고리즘") return ALGORITHM_DOMAINS;
   return [];
 }
 
+
+function getDifficultyFromStage(stageKey: string): string {
+  const stage = LANGUAGE_STAGES.find((s) => s.key === stageKey);
+  if (!stage) return "입문";
+  if (stage.stage <= 3) return "입문";
+  if (stage.stage <= 6) return "초급";
+  if (stage.stage <= 9) return "중급";
+  return "상급";
+}
+
 function buildPrompt(answers: Answers) {
   const detail = answers.detail.trim() || "특별한 추가 조건 없음";
-  const typeLabel =
-    answers.studyType === "언어 개념" ? "언어 개념 학습" : "알고리즘 문제";
+  if (answers.studyType === "언어 개념") {
+    return [
+      `다음 조건에 맞는 Java 언어 개념 학습 문제 1개를 만들어줘.`,
+      `- 언어: Java`,
+      `- 주제: ${answers.topic}`,
+      `- 난이도: ${getDifficultyFromStage(answers.topic)}`,
+      `- 해결한 문제 수: 0`,
+      `- 추가 조건: ${detail}`,
+    ].join("\n");
+  }
   return [
-    `다음 조건에 맞는 학습용 ${typeLabel} 1개를 만들어줘.`,
-    `- 언어: ${answers.language}`,
-    `- 학습 유형: ${answers.studyType}`,
+    `다음 조건에 맞는 Java 알고리즘 문제 1개를 만들어줘.`,
+    `- 언어: Java`,
     `- 주제: ${answers.topic}`,
     `- 난이도: ${answers.difficulty}`,
     `- 추가 조건: ${detail}`,
-    answers.studyType === "언어 개념"
-      ? "- 문제 설명, 코드 작성 요구사항, 예제 입출력 2개, 해설 포인트까지 포함해줘."
-      : "- 문제 설명, 입력/출력 형식, 예제 2개, 풀이 힌트, 정답 코드까지 포함해줘.",
+    `- 문제 설명, 입력/출력 형식, 예제 2개, 풀이 힌트, 정답 코드까지 포함해줘.`,
   ].join("\n");
 }
 
@@ -275,92 +263,6 @@ function TypingIndicator() {
   );
 }
 
-// ─── 언어 아이콘 ─────────────────────────────────────────────
-
-function JavaIcon() {
-  return (
-    <svg
-      width="28"
-      height="28"
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M8.851 18.56s-.917.534.653.714c1.902.218 2.874.187 4.969-.211 0 0 .552.346 1.321.646-4.699 2.013-10.633-.118-6.943-1.149zm-.575-2.627s-1.028.761.542.924c2.032.209 3.636.227 6.413-.308 0 0 .384.389.987.602-5.679 1.661-12.007.13-7.942-1.218zm4.84-4.858c1.158 1.333-.304 2.533-.304 2.533s2.939-1.518 1.589-3.418c-1.261-1.772-2.228-2.652 3.007-5.688 0 0-8.216 2.051-4.292 6.573zm6.214 9.454s.679.559-.747.991c-2.712.822-11.288 1.069-13.669.033-.856-.373.75-.89 1.254-.998.527-.114.828-.093.828-.093-.953-.671-6.156 1.317-2.643 1.887 9.58 1.553 17.462-.7 14.977-1.82zM9.292 13.21s-4.362 1.036-1.544 1.412c1.189.159 3.561.123 5.77-.062 1.806-.152 3.618-.477 3.618-.477s-.637.272-1.098.587c-4.429 1.165-12.986.623-10.522-.568 2.082-1.006 3.776-.892 3.776-.892zm7.824 4.374c4.503-2.34 2.421-4.589.968-4.285-.355.074-.515.138-.515.138s.132-.207.385-.297c2.875-1.011 5.086 2.981-.928 4.562 0-.001.07-.062.09-.118zM14.401 0s2.494 2.494-2.365 6.33c-3.896 3.077-.888 4.832-.001 6.836-2.274-2.053-3.943-3.858-2.824-5.539C10.855 5.158 15.408 3.962 14.401 0zM9.734 23.924c4.322.277 10.959-.153 11.116-2.198 0 0-.302.775-3.572 1.391-3.688.694-8.239.613-10.937.168 0-.001.553.457 3.393.639z"
-        fill="#E76F00"
-      />
-    </svg>
-  );
-}
-
-function PythonIcon() {
-  return (
-    <svg
-      width="28"
-      height="28"
-      viewBox="0 0 24 24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M14.25.18l.9.2.73.26.59.3.45.32.34.34.25.34.16.33.1.3.04.26.02.2-.01.13V8.5l-.05.63-.13.55-.21.46-.26.38-.3.31-.33.25-.35.19-.35.14-.33.1-.3.07-.26.04-.21.02H8.77l-.69.05-.59.14-.5.22-.41.27-.33.32-.27.35-.2.36-.15.37-.1.35-.07.32-.04.27-.02.21v3.06H3.17l-.21-.03-.28-.07-.32-.12-.35-.18-.36-.26-.36-.36-.35-.46-.32-.59-.28-.73-.21-.88-.14-1.05L0 11.97l.06-1.22.16-1.04.24-.87.32-.71.36-.57.4-.44.42-.33.42-.24.4-.16.36-.1.32-.05.24-.01h.16l.06.01h8.16v-.83H6.18l-.01-2.75-.02-.37.05-.34.11-.31.17-.28.25-.26.31-.23.38-.2.44-.18.51-.15.58-.12.64-.1.71-.06.77-.04.84-.02 1.27.05zm-6.3 1.98l-.23.33-.08.41.08.41.23.34.33.22.41.09.41-.09.33-.22.23-.34.08-.41-.08-.41-.23-.33-.33-.22-.41-.09-.41.09zM21.1 6.11l.28.06.32.12.35.18.36.27.36.35.35.47.32.59.28.73.21.88.14 1.04.05 1.23-.06 1.23-.16 1.04-.24.86-.32.71-.36.57-.4.45-.42.33-.42.24-.4.16-.36.09-.32.05-.24.02-.16-.01h-8.22v.82h5.84l.01 2.76.02.36-.05.34-.11.31-.17.29-.25.25-.31.24-.38.2-.44.17-.51.15-.58.13-.64.09-.71.07-.77.04-.84.01-1.27-.04-1.07-.14-.9-.2-.73-.25-.59-.3-.45-.33-.34-.34-.25-.34-.16-.33-.1-.3-.04-.25-.02-.2.01-.13v-5.34l.05-.64.13-.54.21-.46.26-.38.3-.32.33-.24.35-.2.35-.14.33-.1.3-.06.26-.04.21-.02.13-.01h5.84l.69-.05.59-.14.5-.21.41-.28.33-.32.27-.35.2-.36.15-.36.1-.35.07-.32.04-.28.02-.21V6.07h2.09z"
-        fill="#306998"
-      />
-      <path
-        d="M14.25.18l.9.2.73.26.59.3.45.32.34.34.25.34.16.33.1.3.04.26.02.2-.01.13V8.5l-.05.63-.13.55-.21.46-.26.38-.3.31-.33.25-.35.19-.35.14-.33.1-.3.07-.26.04-.21.02H8.77l-.69.05-.59.14-.5.22-.41.27-.33.32-.27.35-.2.36-.15.37-.1.35-.07.32-.04.27-.02.21v3.06H3.17l-.21-.03-.28-.07-.32-.12-.35-.18-.36-.26-.36-.36-.35-.46-.32-.59-.28-.73-.21-.88-.14-1.05L0 11.97l.06-1.22.16-1.04.24-.87.32-.71.36-.57.4-.44.42-.33.42-.24.4-.16.36-.1.32-.05.24-.01h.16l.06.01h8.16v-.83H6.18l-.01-2.75-.02-.37.05-.34.11-.31.17-.28.25-.26.31-.23.38-.2.44-.18.51-.15.58-.12.64-.1.71-.06.77-.04.84-.02 1.27.05z"
-        fill="#FFD43B"
-      />
-    </svg>
-  );
-}
-
-const LANG_ICONS: Record<string, React.ReactNode> = {
-  Java: <JavaIcon />,
-  Python: <PythonIcon />,
-};
-
-// ─── 언어 선택 카드 ─────────────────────────────────────────
-
-function LanguageCards({
-  onSelect,
-  disabled,
-}: {
-  onSelect: (v: string) => void;
-  disabled: boolean;
-}) {
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      {LANGUAGE_TYPES.map((lang) => (
-        <button
-          key={lang.key}
-          type="button"
-          onClick={() => onSelect(lang.key)}
-          disabled={disabled}
-          className="group flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-left transition hover:border-blue/40 hover:bg-white/10 disabled:opacity-40"
-        >
-          <span>{LANG_ICONS[lang.key]}</span>
-          <div>
-            <p className="font-semibold text-slate-100 transition group-hover:text-white">
-              {lang.key}
-            </p>
-            <p
-              className="mt-1 text-xs leading-5 text-slate-400"
-              style={{ whiteSpace: "pre-wrap" }}
-            >
-              {lang.description}
-            </p>
-          </div>
-          <span
-            className={`mt-auto inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${lang.badge.color}`}
-          >
-            {lang.badge.label}
-          </span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
 // ─── 학습 유형 선택 카드 ─────────────────────────────────────
 
 function StudyTypeCards({
@@ -399,6 +301,77 @@ function StudyTypeCards({
           </span>
         </button>
       ))}
+    </div>
+  );
+}
+
+// ─── 언어 개념 스테이지 목록 ──────────────────────────────────
+
+function StageList({
+  onSelect,
+  disabled,
+}: {
+  onSelect: (v: string) => void;
+  disabled: boolean;
+}) {
+  return (
+    <div className="flex justify-end">
+      <div className="w-full max-w-[82%] overflow-hidden rounded-2xl rounded-br-sm border border-white/10 shadow-lg">
+
+        {/* 기초 트랙 */}
+        <div className="bg-[#111827] px-4 pb-3 pt-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-slate-500">
+            단계 선택
+          </p>
+          <div className="space-y-0.5">
+            {LANGUAGE_STAGES.map((s) => (
+              <button
+                key={s.stage}
+                type="button"
+                onClick={() => onSelect(s.key)}
+                disabled={disabled}
+                className="group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-white/8 disabled:opacity-40"
+              >
+                <span className="w-7 shrink-0 font-mono text-xs text-slate-600 group-hover:text-blue">
+                  {String(s.stage).padStart(2, "0")}
+                </span>
+                <span className="font-medium text-slate-200 group-hover:text-white">
+                  {s.key}
+                </span>
+                <span className="ml-auto text-xs text-slate-600">{s.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* OOP 트랙 */}
+        <div className="bg-[#0b0f1a] px-4 pb-3 pt-3">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-700">
+              OOP 트랙
+            </p>
+            <span className="rounded-full border border-slate-700/60 bg-slate-800/60 px-2 py-0.5 text-[10px] text-slate-600">
+              서비스 준비 중
+            </span>
+          </div>
+          <div className="space-y-0.5 opacity-30">
+            {OOP_STAGES.map((s) => (
+              <div
+                key={s.stage}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2"
+              >
+                <span className="w-7 shrink-0 font-mono text-xs text-slate-600">
+                  {String(s.stage).padStart(2, "0")}
+                </span>
+                <span className="font-medium text-slate-400">{s.key}</span>
+                <span className="ml-auto text-xs text-slate-600">{s.desc}</span>
+                <span className="text-[11px]">🔒</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 }
@@ -456,18 +429,20 @@ function DifficultyCards({
 export function PromptChatBuilder() {
   const [stepIndex, setStepIndex] = useState(0);
   const [answers, setAnswers] = useState<Answers>({
-    language: "",
     studyType: "",
     topic: "",
     difficulty: "",
     detail: "",
   });
   const [freeInput, setFreeInput] = useState("");
-  const [copied, setCopied] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const stepOrder = answers.studyType === "언어 개념"
+    ? stepOrder_CONCEPT
+    : stepOrder_ALGORITHM;
 
   // 메시지 빌드
   const messages = useMemo<Message[]>(() => {
@@ -475,11 +450,11 @@ export function PromptChatBuilder() {
       {
         id: 1,
         role: "assistant",
-        text: "안녕하세요! AI 문제 만들기를 시작할게요.\n몇 가지 질문에 답해주시면 맞춤형 코딩 문제를 만들어 드릴게요 🎯",
+        text: "안녕하세요! 자바 기반 AI 문제 만들기를 시작할게요.\n몇 가지 질문에 답해주시면 맞춤형 코딩 문제를 만들어 드릴게요 🎯",
       },
     ];
 
-    STEP_ORDER.forEach((key, index) => {
+    stepOrder.forEach((key, index) => {
       if (index <= stepIndex) {
         result.push({
           id: result.length + 1,
@@ -504,12 +479,12 @@ export function PromptChatBuilder() {
     return result;
   }, [answers, stepIndex]);
 
-  const isDone = stepIndex >= STEP_ORDER.length;
-  const currentKey = isDone ? null : STEP_ORDER[stepIndex];
+  const isDone = stepIndex >= stepOrder.length;
+  const currentKey = isDone ? null : stepOrder[stepIndex];
   const topicOptions = getTopicOptions(answers);
   const generatedPrompt = isDone ? buildPrompt(answers) : "";
   const studyHref = generatedPrompt
-    ? `/study?prompt=${encodeURIComponent(generatedPrompt)}&studyType=${encodeURIComponent(answers.studyType)}`
+    ? `/study?prompt=${encodeURIComponent(generatedPrompt)}&studyType=${encodeURIComponent(answers.studyType)}&topic=${encodeURIComponent(answers.topic)}`
     : "/study";
 
   useEffect(() => {
@@ -523,7 +498,6 @@ export function PromptChatBuilder() {
 
     setAnswers((prev) => ({ ...prev, [currentKey]: normalized }));
     setIsTyping(true);
-    setCopied(false);
 
     setTimeout(() => {
       setIsTyping(false);
@@ -540,23 +514,15 @@ export function PromptChatBuilder() {
     else submitValue(freeInput);
   }
 
-  async function handleCopyPrompt() {
-    if (!generatedPrompt) return;
-    await navigator.clipboard.writeText(generatedPrompt);
-    setCopied(true);
-  }
-
   function reset() {
     setStepIndex(0);
     setAnswers({
-      language: "",
       studyType: "",
       topic: "",
       difficulty: "",
       detail: "",
     });
     setFreeInput("");
-    setCopied(false);
   }
 
   // 현재 스텝의 옵션 버튼 목록
@@ -583,7 +549,9 @@ export function PromptChatBuilder() {
               <path d="M2 12l10 5 10-5" />
             </svg>
           </div>
-          <span className="font-semibold text-slate-100">AI 문제 만들기</span>
+          <span className="font-semibold text-slate-100">
+            AI 문제 만들기 · Java
+          </span>
         </div>
         <Link
           href="/"
@@ -625,6 +593,13 @@ export function PromptChatBuilder() {
             </div>
           )}
 
+          {/* 언어 개념 스테이지 목록 */}
+          {currentKey === "topic" &&
+            answers.studyType === "언어 개념" &&
+            !isTyping && (
+              <StageList onSelect={submitValue} disabled={isTyping} />
+            )}
+
           <div ref={bottomRef} />
         </div>
       </div>
@@ -633,11 +608,6 @@ export function PromptChatBuilder() {
       {!isDone && (
         <div className="shrink-0 border-t border-white/10 bg-bg/80 px-4 py-4 backdrop-blur-xl sm:px-8">
           <div className="mx-auto max-w-2xl space-y-3">
-            {/* 언어 선택 카드 */}
-            {currentKey === "language" && !isTyping && (
-              <LanguageCards onSelect={submitValue} disabled={isTyping} />
-            )}
-
             {/* 학습 유형 카드 선택 */}
             {currentKey === "studyType" && !isTyping && (
               <StudyTypeCards onSelect={submitValue} disabled={isTyping} />
@@ -653,8 +623,7 @@ export function PromptChatBuilder() {
             )}
 
             {/* 일반 옵션 버튼 */}
-            {currentKey !== "language" &&
-              currentKey !== "studyType" &&
+            {currentKey !== "studyType" &&
               currentKey !== "difficulty" &&
               currentOptions && (
                 <div className="flex flex-wrap gap-2">
@@ -673,52 +642,48 @@ export function PromptChatBuilder() {
               )}
 
             {/* 텍스트 입력 (detail 단계 또는 직접 입력) */}
-            {currentKey !== "language" &&
-              currentKey !== "studyType" &&
-              currentKey !== "difficulty" && (
-                <form onSubmit={handleFreeSubmit} className="flex gap-2">
-                  <input
-                    ref={inputRef}
-                    value={freeInput}
-                    onChange={(e) => setFreeInput(e.target.value)}
-                    disabled={isTyping}
-                    placeholder={
-                      currentKey === "detail"
-                        ? "추가 조건 입력 (없으면 Enter로 건너뜀)"
-                        : "직접 입력..."
-                    }
-                    className="h-11 flex-1 rounded-xl border border-white/10 bg-white/5 px-4 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-blue/60 focus:ring-2 focus:ring-blue/20 disabled:opacity-40"
-                  />
-                  <button
-                    type="submit"
-                    disabled={
-                      isTyping || (!freeInput.trim() && currentKey !== "detail")
-                    }
-                    className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-r from-blue to-purple text-white transition hover:opacity-90 disabled:opacity-40"
+            {currentKey !== "studyType" && currentKey !== "difficulty" && (
+              <form onSubmit={handleFreeSubmit} className="flex gap-2">
+                <input
+                  ref={inputRef}
+                  value={freeInput}
+                  onChange={(e) => setFreeInput(e.target.value)}
+                  disabled={isTyping}
+                  placeholder={
+                    currentKey === "detail"
+                      ? "추가 조건 입력 (없으면 Enter로 건너뜀)"
+                      : "직접 입력..."
+                  }
+                  className="h-11 flex-1 rounded-xl border border-white/10 bg-white/5 px-4 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-blue/60 focus:ring-2 focus:ring-blue/20 disabled:opacity-40"
+                />
+                <button
+                  type="submit"
+                  disabled={
+                    isTyping || (!freeInput.trim() && currentKey !== "detail")
+                  }
+                  className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-r from-blue to-purple text-white transition hover:opacity-90 disabled:opacity-40"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                   >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M22 2L11 13" />
-                      <path d="M22 2L15 22 11 13 2 9l20-7z" />
-                    </svg>
-                  </button>
-                </form>
-              )}
+                    <path d="M22 2L11 13" />
+                    <path d="M22 2L15 22 11 13 2 9l20-7z" />
+                  </svg>
+                </button>
+              </form>
+            )}
 
             <p className="text-center text-xs text-slate-600">
               {currentKey === "detail"
                 ? "Enter를 누르면 건너뜁니다"
-                : currentKey === "language" ||
-                    currentKey === "studyType" ||
-                    currentKey === "difficulty"
+                : currentKey === "studyType" || currentKey === "difficulty"
                   ? "카드를 선택해 주세요"
                   : "버튼을 선택하거나 직접 입력하세요"}
             </p>
