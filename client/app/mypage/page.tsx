@@ -118,6 +118,7 @@ export default function MyPage() {
   const [user, setUser] = useState<UserInfo | null>(null);
   const [problems, setProblems] = useState<MyProblem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
@@ -126,19 +127,27 @@ export default function MyPage() {
       return;
     }
 
-    const headers = authHeaders() as Record<string, string>;
-
-    Promise.all([
-      fetch("/api/user/me", { headers }).then((r) => r.json()),
-      fetch("/api/v1/problems/my", { headers }).then((r) => r.json()),
-    ])
-      .then(([userRes, problemsRes]) => {
+    const fetchData = async () => {
+      try {
+        const headers = authHeaders() as Record<string, string>;
+        const [userRes, problemsRes] = await Promise.all([
+          fetch("/api/user/me", { headers }).then((r) => r.json()),
+          fetch("/api/v1/problems/my", { headers }).then((r) => r.json()),
+        ]);
         if (userRes.success) setUser(userRes.data);
+        else setError(userRes.message ?? "사용자 정보를 불러올 수 없어요.");
         if (problemsRes.success) setProblems(problemsRes.data ?? []);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [router]);
+      } catch (e) {
+        console.error("마이페이지 로드 실패:", e);
+        setError("서버에 연결할 수 없어요. 잠시 후 다시 시도해 주세요.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
 
   const filtered = problems.filter((p) => p.status === tab);
   const solvedCount = problems.filter((p) => p.status === "solved").length;
@@ -159,6 +168,24 @@ export default function MyPage() {
               />
             ))}
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-bg text-slate-50">
+        <Navbar />
+        <div className="flex flex-col items-center justify-center pt-40 gap-4 text-slate-400">
+          <p className="text-4xl">⚠️</p>
+          <p className="text-sm">{error}</p>
+          <button
+            onClick={() => { setError(null); setLoading(true); }}
+            className="mt-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs text-slate-300 transition hover:border-blue/40 hover:text-blue"
+          >
+            다시 시도
+          </button>
         </div>
       </div>
     );
