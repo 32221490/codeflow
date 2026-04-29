@@ -56,8 +56,7 @@ public final class PromptTemplate {
       - 주제: {topic}
       - 난이도: {difficulty}
       - 문제: {problem}
-      - 작성한 코드:
-      {userCode}
+      - 작성한 코드: {userCode}
       - 질문: {question}
       """;
 
