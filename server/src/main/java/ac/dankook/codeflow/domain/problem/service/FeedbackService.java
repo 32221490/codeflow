@@ -1,21 +1,15 @@
 package ac.dankook.codeflow.domain.problem.service;
 
 import ac.dankook.codeflow.domain.problem.entity.problem;
-import ac.dankook.codeflow.domain.problem.repository.ProblemRepository;
-import ac.dankook.codeflow.global.exception.BusinessException;
-import ac.dankook.codeflow.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
 public class FeedbackService {
-    private final ProblemRepository problemRepository;
     private final GeminiService geminiService;
 
-    public String generateFeedback(long problemNumber, String usersCode, String difficulty) {
-        problem p = problemRepository.findById(problemNumber)
-                .orElseThrow(() -> new BusinessException(ErrorCode.AI_RESPONSE_FAILURE));
+    public String generateFeedback(problem p, String usersCode, String difficulty) {
         String prompt = buildFeedbackPrompt(p, usersCode, difficulty);
 
         return geminiService.callGeminiFeedback(prompt);
